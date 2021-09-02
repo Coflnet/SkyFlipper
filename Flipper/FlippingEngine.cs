@@ -116,16 +116,13 @@ namespace Coflnet.Sky.Flipper
                         c.Subscribe(NewAuctionTopic);
                         try
                         {
-                            while (true)
+                            while (!cancleToken.IsCancellationRequested)
                             {
                                 try
                                 {
                                     var cr = c.Consume(500);
                                     if (cr == null)
                                         continue;
-
-                                    if (cancleToken.IsCancellationRequested)
-                                        return;
 
                                     await ProcessSingleFlip(p, cr);
 
@@ -247,8 +244,8 @@ namespace Coflnet.Sky.Flipper
                 Rarity = auction.Tier,
                 Interesting = PropertiesSelector.GetProperties(auction).OrderByDescending(a => a.Rating).Select(a => a.Value).ToList(),
                 SellerName = await PlayerSearch.Instance.GetNameWithCacheAsync(auction.AuctioneerId),
-                LowestBin = lowestBin.FirstOrDefault()?.Price,
-                SecondLowestBin = lowestBin.Count >= 2 ? lowestBin[1].Price : 0L
+                LowestBin = lowestBin?.FirstOrDefault()?.Price,
+                SecondLowestBin = lowestBin?.Count >= 2 ? lowestBin[1].Price : 0L
             };
 
             foundFlipCount.Inc();
