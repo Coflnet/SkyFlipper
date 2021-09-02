@@ -209,7 +209,7 @@ namespace Coflnet.Sky.Flipper
             {
                 medianPrice = relevantAuctions
                                 .OrderByDescending(a => a.HighestBidAmount)
-                                .Select(a => a.HighestBidAmount / a.Count)
+                                .Select(a => a.HighestBidAmount / (a.Count == 0 ? 1 : a.Count))
                                 .Skip(relevantAuctions.Count / 2)
                                 .FirstOrDefault();
             }
@@ -379,9 +379,17 @@ namespace Coflnet.Sky.Flipper
 
             if (auction.ItemName != clearedName && clearedName != null)
                 select = select.Where(a => EF.Functions.Like(a.ItemName, "%" + clearedName));
-            else if (auction.Tag.StartsWith("PET"))
+            else if (auction.Tag.StartsWith("PET") && auction.ItemName.StartsWith('['))
             {
-                select = AddPetLvlSelect(auction, select);
+                try
+                {
+                    select = AddPetLvlSelect(auction, select);
+                }
+                catch (Exception e)
+                {
+                    dev.Logger.Instance.Error(e, "pet lvl add " + auction.ItemName);
+                    return null;
+                }
             }
             else
             {
