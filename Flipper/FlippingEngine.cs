@@ -495,7 +495,6 @@ namespace Coflnet.Sky.Flipper
         5 Reforge
         6 Flumming potato books
         7 Hot Potato Books
-
         */
     }
 
