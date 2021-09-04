@@ -245,7 +245,8 @@ namespace Coflnet.Sky.Flipper
                 Interesting = PropertiesSelector.GetProperties(auction).OrderByDescending(a => a.Rating).Select(a => a.Value).ToList(),
                 SellerName = await PlayerSearch.Instance.GetNameWithCacheAsync(auction.AuctioneerId),
                 LowestBin = lowestBin?.FirstOrDefault()?.Price,
-                SecondLowestBin = lowestBin?.Count >= 2 ? lowestBin[1].Price : 0L
+                SecondLowestBin = lowestBin?.Count >= 2 ? lowestBin[1].Price : 0L,
+                Auction = auction
             };
 
             foundFlipCount.Inc();
@@ -463,7 +464,7 @@ namespace Coflnet.Sky.Flipper
                                     || e.Type == ultiType && e.Level == ultiLevel)).Count() >= matchingCount
                                     && a.Enchantments.Where(e => UltiEnchantList.Contains(e.Type) || e.Level > 5).Count() <= maxImportantEnchants);
             else if (auction.Enchantments?.Count == 1)
-                select = select.Where(a => a.Enchantments != null && a.Enchantments.Any()
+                select = select.Where(a => a.Enchantments != null && a.Enchantments.Count() == 1
                         && a.Enchantments.First().Type == auction.Enchantments.First().Type
                         && a.Enchantments.First().Level == auction.Enchantments.First().Level);
             else if (auction.Enchantments?.Count == 2)
@@ -531,6 +532,8 @@ namespace Coflnet.Sky.Flipper
 
         [DataMember(Name = "lowestBin")]
         public long? LowestBin;
+        [DataMember(Name = "auction")]
+        public SaveAuction Auction;
         [IgnoreDataMember]
         public long UId;
     }
