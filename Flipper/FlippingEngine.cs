@@ -128,7 +128,10 @@ namespace Coflnet.Sky.Flipper
 
                                     c.Commit(new TopicPartitionOffset[] { cr.TopicPartitionOffset });
                                     if (cr.Offset.Value % 500 == 0)
+                                    {
                                         Console.WriteLine($"consumed new-auction {cr.Offset.Value}");
+                                        System.GC.Collect();
+                                    }
                                 }
                                 catch (ConsumeException e)
                                 {
