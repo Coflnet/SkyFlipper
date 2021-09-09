@@ -127,6 +127,8 @@ namespace Coflnet.Sky.Flipper
                                     await ProcessSingleFlip(p, cr);
 
                                     c.Commit(new TopicPartitionOffset[] { cr.TopicPartitionOffset });
+                                    if (cr.Offset.Value % 500 == 0)
+                                        Console.WriteLine($"consumed new-auction {cr.Offset.Value}");
                                 }
                                 catch (ConsumeException e)
                                 {
@@ -184,7 +186,7 @@ namespace Coflnet.Sky.Flipper
                 return null;
 
             // makes no sense to check old auctions
-            if(auction.Start < DateTime.Now - TimeSpan.FromMinutes(5))
+            if (auction.Start < DateTime.Now - TimeSpan.FromMinutes(5))
                 return null;
 
             var price = (auction.HighestBidAmount == 0 ? auction.StartingBid : (auction.HighestBidAmount * 1.1)) / auction.Count;
@@ -237,7 +239,7 @@ namespace Coflnet.Sky.Flipper
 
             var flip = new FlipInstance()
             {
-                MedianPrice = (int)medianPrice,
+                MedianPrice = (int)medianPrice * auction.Count,
                 Name = auction.ItemName,
                 Uuid = auction.Uuid,
                 LastKnownCost = (int)price,
