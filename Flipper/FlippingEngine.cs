@@ -183,6 +183,10 @@ namespace Coflnet.Sky.Flipper
             if (auction.ItemName == "null")
                 return null;
 
+            // makes no sense to check old auctions
+            if(auction.Start < DateTime.Now - TimeSpan.FromMinutes(5))
+                return null;
+
             var price = (auction.HighestBidAmount == 0 ? auction.StartingBid : (auction.HighestBidAmount * 1.1)) / auction.Count;
             if (price < 10) // only care about auctions worth more than the fee
                 return null;
