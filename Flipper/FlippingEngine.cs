@@ -160,12 +160,13 @@ namespace Coflnet.Sky.Flipper
                 var flip = await NewAuction(cr.Message.Value, context);
                 if (flip != null)
                 {
+                    var timetofind = (DateTime.Now - flip.Auction.FindTime).TotalSeconds;
                     p.Produce(ProduceTopic, new Message<string, FlipInstance> { Value = flip, Key = flip.UId.ToString() }, report =>
                     {
                         if (report.TopicPartitionOffset.Offset % 200 == 0)
-                            Console.WriteLine($"found flip {report.TopicPartitionOffset.Offset}");
+                            Console.WriteLine($"found flip {report.TopicPartitionOffset.Offset} took {timetofind}");
                     });
-                    runtroughTime.Observe((DateTime.Now - flip.Auction.FindTime).TotalSeconds);
+                    runtroughTime.Observe(timetofind);
                 }
             }
         }
