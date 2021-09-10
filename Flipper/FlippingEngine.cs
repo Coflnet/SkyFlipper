@@ -40,11 +40,14 @@ namespace Coflnet.Sky.Flipper
         {
             Buckets = Prometheus.Histogram.LinearBuckets(start: 20, width: 15, count: 10)
         });
+        static Prometheus.HistogramConfiguration buckets = new Prometheus.HistogramConfiguration()
+        {
+            Buckets = Prometheus.Histogram.LinearBuckets(start: 0, width: 2, count: 10)
+        };
         static Prometheus.Histogram runtroughTime = Prometheus.Metrics.CreateHistogram("auctionToFlipSeconds", "Represents the time taken from loading the auction to finding flip. (should be close to 0)",
-            new Prometheus.HistogramConfiguration()
-            {
-                Buckets = Prometheus.Histogram.LinearBuckets(start: 0, width: 2, count: 10)
-            });
+            buckets);
+        static Prometheus.Histogram receiveTime = Prometheus.Metrics.CreateHistogram("auctionReceiveSeconds", "Represents the time that the flipper received an auction. (should be close to 0)",
+            buckets);
 
         static FlipperEngine()
         {
@@ -123,7 +126,6 @@ namespace Coflnet.Sky.Flipper
                                     var cr = c.Consume(500);
                                     if (cr == null)
                                         continue;
-
                                     await ProcessSingleFlip(p, cr);
 
                                     c.Commit(new TopicPartitionOffset[] { cr.TopicPartitionOffset });
@@ -155,6 +157,7 @@ namespace Coflnet.Sky.Flipper
 
         private async Task ProcessSingleFlip(IProducer<string, FlipInstance> p, ConsumeResult<Ignore, SaveAuction> cr)
         {
+            receiveTime.Observe((DateTime.Now - cr.Message.Value.FindTime).TotalSeconds);
             using (var context = new HypixelContext())
             {
                 var flip = await NewAuction(cr.Message.Value, context);
