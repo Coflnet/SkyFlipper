@@ -160,10 +160,12 @@ namespace Coflnet.Sky.Flipper
                 var flip = await NewAuction(cr.Message.Value, context);
                 if (flip != null)
                 {
-                    var result = await p.ProduceAsync(ProduceTopic, new Message<string, FlipInstance> { Value = flip, Key = flip.UId.ToString() });
+                    p.Produce(ProduceTopic, new Message<string, FlipInstance> { Value = flip, Key = flip.UId.ToString() }, report =>
+                    {
+                        if (report.TopicPartitionOffset.Offset % 200 == 0)
+                            Console.WriteLine($"found flip {report.TopicPartitionOffset.Offset}");
+                    });
                     runtroughTime.Observe((DateTime.Now - flip.Auction.FindTime).TotalSeconds);
-                    if (result.TopicPartitionOffset.Offset % 200 == 0)
-                        Console.WriteLine($"found flip {result.TopicPartitionOffset.Offset}");
                 }
             }
         }
@@ -496,7 +498,11 @@ namespace Coflnet.Sky.Flipper
 
 
 
-        private static ProducerConfig producerConfig = new ProducerConfig { BootstrapServers = SimplerConfig.Config.Instance["KAFKA_HOST"] };
+        private static ProducerConfig producerConfig = new ProducerConfig
+        {
+            BootstrapServers = SimplerConfig.Config.Instance["KAFKA_HOST"],
+            LingerMs = 2
+        };
 
         /*
         1 Enchantments
