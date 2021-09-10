@@ -18,7 +18,6 @@ namespace Coflnet.Sky.Flipper
     {
         public static FlipperEngine Instance { get; }
 
-        public static bool disabled;
         public static readonly string ProduceTopic = SimplerConfig.Config.Instance["TOPICS:FLIP"];
         public static readonly string NewAuctionTopic = SimplerConfig.Config.Instance["TOPICS:NEW_AUCTION"];
         public static readonly string KafkaHost = SimplerConfig.Config.Instance["KAFKA_HOST"];
@@ -29,19 +28,23 @@ namespace Coflnet.Sky.Flipper
 
         private ConcurrentQueue<SaveAuction> PotetialFlipps = new ConcurrentQueue<SaveAuction>();
         private ConcurrentQueue<SaveAuction> LowPriceQueue = new ConcurrentQueue<SaveAuction>();
-        CancellationTokenSource TempWorkersStopSource = new CancellationTokenSource();
 
-        public int QueueSize => PotetialFlipps.Count + LowPriceQueue.Count * 10000;
         static private List<Enchantment.EnchantmentType> UltiEnchantList = new List<Enchantment.EnchantmentType>();
-
-
 
 
         Prometheus.Counter foundFlipCount = Prometheus.Metrics
                     .CreateCounter("flips_found", "Number of flips found");
         Prometheus.Counter alreadySold = Prometheus.Metrics
                     .CreateCounter("already_sold_flips", "Flips that were already sold for premium users for some reason");
-        Prometheus.Histogram time = Prometheus.Metrics.CreateHistogram("time_to_find_flip", "How long did it take to find a flip");
+        Prometheus.Histogram time = Prometheus.Metrics.CreateHistogram("time_to_find_flip", "How long did it take to find a flip", new Prometheus.HistogramConfiguration()
+        {
+            Buckets = Prometheus.Histogram.LinearBuckets(start: 20, width: 15, count: 10)
+        });
+        static Prometheus.Histogram runtroughTime = Prometheus.Metrics.CreateHistogram("auctionToFlipSeconds", "Represents the time taken from loading the auction to finding flip. (should be close to 0)",
+            new Prometheus.HistogramConfiguration()
+            {
+                Buckets = Prometheus.Histogram.LinearBuckets(start: 0, width: 2, count: 10)
+            });
 
         static FlipperEngine()
         {
@@ -55,9 +58,6 @@ namespace Coflnet.Sky.Flipper
                 }
             }
         }
-
-
-
 
 
         private async Task DoFlipWork(CancellationToken cancleToken)
@@ -161,6 +161,7 @@ namespace Coflnet.Sky.Flipper
                 if (flip != null)
                 {
                     var result = await p.ProduceAsync(ProduceTopic, new Message<string, FlipInstance> { Value = flip, Key = flip.UId.ToString() });
+                    runtroughTime.Observe((DateTime.Now - flip.Auction.FindTime).TotalSeconds);
                     if (result.TopicPartitionOffset.Offset % 200 == 0)
                         Console.WriteLine($"found flip {result.TopicPartitionOffset.Offset}");
                 }
