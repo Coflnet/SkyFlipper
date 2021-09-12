@@ -44,9 +44,9 @@ namespace Coflnet.Sky.Flipper
         {
             Buckets = Prometheus.Histogram.LinearBuckets(start: 0, width: 2, count: 10)
         };
-        static Prometheus.Histogram runtroughTime = Prometheus.Metrics.CreateHistogram("auctionToFlipSeconds", "Represents the time taken from loading the auction to finding flip. (should be close to 0)",
+        static Prometheus.Histogram runtroughTime = Prometheus.Metrics.CreateHistogram("sky_flipper_auction_to_send_flip_seconds", "Seconds from loading the auction to finding the flip. (should be close to 0)",
             buckets);
-        static Prometheus.Histogram receiveTime = Prometheus.Metrics.CreateHistogram("auctionReceiveSeconds", "Represents the time that the flipper received an auction. (should be close to 0)",
+        static Prometheus.Histogram receiveTime = Prometheus.Metrics.CreateHistogram("sky_flipper_auction_receive_seconds", "Seconds that the flipper received an auction. (should be close to 0)",
             buckets);
 
         static FlipperEngine()
@@ -108,46 +108,47 @@ namespace Coflnet.Sky.Flipper
                     // topic/partitions of interest. By default, offsets are committed
                     // automatically, so in this example, consumption will only start from the
                     // earliest message in the topic 'my-topic' the first time you run the program.
-                    AutoOffsetReset = AutoOffsetReset.Earliest
+                    AutoOffsetReset = AutoOffsetReset.Earliest,
+                    AutoCommitIntervalMs = 1500
                 };
 
                 using (var c = new ConsumerBuilder<Ignore, SaveAuction>(conf).SetValueDeserializer(SerializerFactory.GetDeserializer<SaveAuction>()).Build())
+                using (var p = new ProducerBuilder<string, FlipInstance>(producerConfig).SetValueSerializer(SerializerFactory.GetSerializer<FlipInstance>()).Build())
                 {
-                    using (var p = new ProducerBuilder<string, FlipInstance>(producerConfig).SetValueSerializer(SerializerFactory.GetSerializer<FlipInstance>()).Build())
+                    //var factory = new TaskFactory(new LimitedConcurrencyLevelTaskScheduler(1));
+                    c.Subscribe(NewAuctionTopic);
+                    try
                     {
-                        //var factory = new TaskFactory(new LimitedConcurrencyLevelTaskScheduler(1));
-                        c.Subscribe(NewAuctionTopic);
-                        try
+                        while (!cancleToken.IsCancellationRequested)
                         {
-                            while (!cancleToken.IsCancellationRequested)
+                            try
                             {
-                                try
-                                {
-                                    var cr = c.Consume(500);
-                                    if (cr == null)
-                                        continue;
-                                    await ProcessSingleFlip(p, cr);
+                                var cr = c.Consume(cancleToken);
+                                if (cr == null)
+                                    continue;
+                                await ProcessSingleFlip(p, cr);
 
-                                    c.Commit(new TopicPartitionOffset[] { cr.TopicPartitionOffset });
-                                    if (cr.Offset.Value % 500 == 0)
-                                    {
-                                        Console.WriteLine($"consumed new-auction {cr.Offset.Value}");
-                                        System.GC.Collect();
-                                    }
-                                }
-                                catch (ConsumeException e)
+                                //c.Commit(new TopicPartitionOffset[] { cr.TopicPartitionOffset });
+                                if (cr.Offset.Value % 500 == 0)
                                 {
-                                    dev.Logger.Instance.Error(e, "flipper process potential ");
+                                    Console.WriteLine($"consumed new-auction {cr.Offset.Value}");
+                                    if (cr.Offset.Value % 2000 == 0)
+                                        System.GC.Collect();
                                 }
                             }
-                        }
-                        catch (OperationCanceledException)
-                        {
-                            // Ensure the consumer leaves the group cleanly and final offsets are committed.
-                            c.Close();
+                            catch (ConsumeException e)
+                            {
+                                dev.Logger.Instance.Error(e, "flipper process potential ");
+                            }
                         }
                     }
+                    catch (OperationCanceledException)
+                    {
+                        // Ensure the consumer leaves the group cleanly and final offsets are committed.
+                        c.Close();
+                    }
                 }
+
             }
             catch (Exception e)
             {
@@ -554,7 +555,7 @@ namespace Coflnet.Sky.Flipper
         public long? LowestBin;
         [DataMember(Name = "auction")]
         public SaveAuction Auction;
-        [IgnoreDataMember]
+        [DataMember(Name = "uId")]
         public long UId;
     }
 }
