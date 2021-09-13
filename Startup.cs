@@ -1,12 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using hypixel;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpsPolicy;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -35,6 +35,16 @@ namespace Coflnet.Sky.Flipper
                 c.SwaggerDoc("v1", new OpenApiInfo { Title = "SkyFlipper", Version = "v1" });
             });
             services.AddJaeger();
+            
+            var serverVersion = new MariaDbServerVersion(new Version(Configuration["MARIADB_VERSION"]));
+            services.AddDbContext<HypixelContext>(
+                dbContextOptions => dbContextOptions
+                    .UseMySql(Configuration["DBCONNECTION"], serverVersion)
+                    .EnableSensitiveDataLogging() // <-- These two calls are optional but help
+                    .EnableDetailedErrors()       // <-- with debugging (remove for production).
+            );
+
+            services.AddHostedService<FlipperService>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -46,8 +56,6 @@ namespace Coflnet.Sky.Flipper
                 app.UseSwagger();
                 app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "SkyFlipper v1"));
             }
-
-            app.UseHttpsRedirection();
 
             app.UseRouting();
 

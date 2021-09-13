@@ -1,8 +1,8 @@
 using System;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.Serialization;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -10,7 +10,9 @@ using Confluent.Kafka;
 using hypixel;
 using MessagePack;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
+using OpenTracing.Propagation;
 
 namespace Coflnet.Sky.Flipper
 {
@@ -30,6 +32,7 @@ namespace Coflnet.Sky.Flipper
         private ConcurrentQueue<SaveAuction> LowPriceQueue = new ConcurrentQueue<SaveAuction>();
 
         static private List<Enchantment.EnchantmentType> UltiEnchantList = new List<Enchantment.EnchantmentType>();
+        internal IServiceScopeFactory serviceFactory;
 
 
         Prometheus.Counter foundFlipCount = Prometheus.Metrics
@@ -126,7 +129,12 @@ namespace Coflnet.Sky.Flipper
                                 var cr = c.Consume(cancleToken);
                                 if (cr == null)
                                     continue;
-                                await ProcessSingleFlip(p, cr);
+                                var tracer = OpenTracing.Util.GlobalTracer.Instance;
+                                var span = OpenTracing.Util.GlobalTracer.Instance.BuildSpan("SearchFlip")
+                                        .AsChildOf(tracer.Extract(BuiltinFormats.TextMap, cr.Message.Value.TraceContext));
+
+                                using (var scope = span.StartActive())
+                                    await ProcessSingleFlip(p, cr);
 
                                 //c.Commit(new TopicPartitionOffset[] { cr.TopicPartitionOffset });
                                 if (cr.Offset.Value % 500 == 0)
@@ -159,20 +167,22 @@ namespace Coflnet.Sky.Flipper
         private async Task ProcessSingleFlip(IProducer<string, FlipInstance> p, ConsumeResult<Ignore, SaveAuction> cr)
         {
             receiveTime.Observe((DateTime.Now - cr.Message.Value.FindTime).TotalSeconds);
-            using (var context = new HypixelContext())
+
+            using var scope = serviceFactory.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<HypixelContext>();
+
+            var flip = await NewAuction(cr.Message.Value, context);
+            if (flip != null)
             {
-                var flip = await NewAuction(cr.Message.Value, context);
-                if (flip != null)
+                var timetofind = (DateTime.Now - flip.Auction.FindTime).TotalSeconds;
+                p.Produce(ProduceTopic, new Message<string, FlipInstance> { Value = flip, Key = flip.UId.ToString() }, report =>
                 {
-                    var timetofind = (DateTime.Now - flip.Auction.FindTime).TotalSeconds;
-                    p.Produce(ProduceTopic, new Message<string, FlipInstance> { Value = flip, Key = flip.UId.ToString() }, report =>
-                    {
-                        if (report.TopicPartitionOffset.Offset % 200 == 0)
-                            Console.WriteLine($"found flip {report.TopicPartitionOffset.Offset} took {timetofind}");
-                    });
-                    runtroughTime.Observe(timetofind);
-                }
+                    if (report.TopicPartitionOffset.Offset % 200 == 0)
+                        Console.WriteLine($"found flip {report.TopicPartitionOffset.Offset} took {timetofind}");
+                });
+                runtroughTime.Observe(timetofind);
             }
+
         }
 
         private uint _auctionCounter = 0;
@@ -518,44 +528,5 @@ namespace Coflnet.Sky.Flipper
         6 Flumming potato books
         7 Hot Potato Books
         */
-    }
-
-    /// <summary>
-    /// Producer representation of flips
-    /// </summary>
-    [DataContract]
-    public class FlipInstance
-    {
-        [DataMember(Name = "median")]
-        public int MedianPrice;
-        [DataMember(Name = "cost")]
-        public int LastKnownCost;
-        [DataMember(Name = "uuid")]
-        public string Uuid;
-        [DataMember(Name = "name")]
-        public string Name;
-        [DataMember(Name = "sellerName")]
-        public string SellerName;
-        [DataMember(Name = "volume")]
-        public float Volume;
-        [DataMember(Name = "tag")]
-        public string Tag;
-        [DataMember(Name = "bin")]
-        public bool Bin;
-        [DataMember(Name = "sold")]
-        public bool Sold { get; set; }
-        [DataMember(Name = "tier")]
-        public Tier Rarity { get; set; }
-        [DataMember(Name = "prop")]
-        public List<string> Interesting { get; set; }
-        [DataMember(Name = "secondLowestBin")]
-        public long? SecondLowestBin { get; set; }
-
-        [DataMember(Name = "lowestBin")]
-        public long? LowestBin;
-        [DataMember(Name = "auction")]
-        public SaveAuction Auction;
-        [DataMember(Name = "uId")]
-        public long UId;
     }
 }

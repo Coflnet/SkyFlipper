@@ -14,10 +14,13 @@ namespace Coflnet.Sky.Flipper.Controllers
     public class FlippingController : ControllerBase
     {
         private readonly ILogger<FlippingController> _logger;
+        private readonly HypixelContext dbContext;
 
-        public FlippingController(ILogger<FlippingController> logger)
+        public FlippingController(ILogger<FlippingController> logger,
+        HypixelContext context)
         {
             _logger = logger;
+            dbContext = context;
         }
 
         [HttpGet]
@@ -30,7 +33,7 @@ namespace Coflnet.Sky.Flipper.Controllers
                 .Include(a => a.Enchantments));
             using (var context = new HypixelContext())
             {
-                return (await FlipperEngine.Instance.GetRelevantAuctionsCache(auction, context)).Item1;
+                return (await FlipperEngine.Instance.GetRelevantAuctionsCache(auction, dbContext)).Item1;
             }
         }
     }

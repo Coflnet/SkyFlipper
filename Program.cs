@@ -14,8 +14,6 @@ namespace Coflnet.Sky.Flipper
         public static void Main(string[] args)
         {
 
-            for (int i = 0; i < 2; i++)
-                hypixel.Program.RunIsolatedForever(Flipper.FlipperEngine.Instance.ProcessPotentialFlipps, $"flipper worker {i} got error", 1);
             CreateHostBuilder(args).Build().Run();
         }
 
