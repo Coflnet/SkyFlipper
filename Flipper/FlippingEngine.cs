@@ -256,6 +256,7 @@ namespace Coflnet.Sky.Flipper
                 relevantAuctionIds.Clear();
             }
             var itemTag = auction.Tag;
+            var name = PlayerSearch.Instance.GetNameWithCacheAsync(auction.AuctioneerId);
             List<ItemPrices.AuctionPreview> lowestBin = await ItemPrices.GetLowestBin(itemTag, auction.Tier);
 
             var flip = new FlipInstance()
@@ -270,7 +271,7 @@ namespace Coflnet.Sky.Flipper
                 UId = auction.UId,
                 Rarity = auction.Tier,
                 Interesting = PropertiesSelector.GetProperties(auction).OrderByDescending(a => a.Rating).Select(a => a.Value).ToList(),
-                SellerName = await PlayerSearch.Instance.GetNameWithCacheAsync(auction.AuctioneerId),
+                SellerName = await name,
                 LowestBin = lowestBin?.FirstOrDefault()?.Price,
                 SecondLowestBin = lowestBin?.Count >= 2 ? lowestBin[1].Price : 0L,
                 Auction = auction
