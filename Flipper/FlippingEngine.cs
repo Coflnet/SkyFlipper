@@ -97,6 +97,8 @@ namespace Coflnet.Sky.Flipper
                     c.Subscribe(NewAuctionTopic);
                     try
                     {
+                        await Task.Yield();
+                        Console.WriteLine("starting worker");
                         while (!cancleToken.IsCancellationRequested)
                         {
                             try
