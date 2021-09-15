@@ -36,5 +36,14 @@ namespace Coflnet.Sky.Flipper.Controllers
                 return (await FlipperEngine.Instance.GetRelevantAuctionsCache(auction, dbContext)).Item1;
             }
         }
+
+        [HttpGet]
+        [Route("/status")]
+        public IActionResult Status(string uuid)
+        {
+            if(FlipperEngine.Instance.LastLiveProbe < DateTime.Now - TimeSpan.FromMinutes(2))
+                return StatusCode(500);
+            return Ok();
+        }
     }
 }

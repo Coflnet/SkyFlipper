@@ -51,6 +51,8 @@ namespace Coflnet.Sky.Flipper
             buckets);
         static Prometheus.Histogram receiveTime = Prometheus.Metrics.CreateHistogram("sky_flipper_auction_receive_seconds", "Seconds that the flipper received an auction. (should be close to 0)",
             buckets);
+        
+        public DateTime LastLiveProbe = DateTime.Now;
 
         static FlipperEngine()
         {
@@ -65,33 +67,6 @@ namespace Coflnet.Sky.Flipper
             }
         }
 
-
-        private async Task DoFlipWork(CancellationToken cancleToken)
-        {
-            try
-            {
-                while (LowPriceQueue.Count > 10)
-                {
-                    await ProcessPotentialFlipps(cancleToken);
-                    if (cancleToken.IsCancellationRequested)
-                    {
-                        Console.Write(" canceled temp worker :/ ");
-                        return;
-                    }
-                }
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine($"Temp flip worker got exception {e.Message} {e.StackTrace}");
-            }
-        }
-
-
-
-        public void Test()
-        {
-
-        }
 
         public Task ProcessPotentialFlipps()
         {
@@ -126,6 +101,7 @@ namespace Coflnet.Sky.Flipper
                         {
                             try
                             {
+                                LastLiveProbe = DateTime.Now;
                                 var cr = c.Consume(cancleToken);
                                 if (cr == null)
                                     continue;
