@@ -51,7 +51,7 @@ namespace Coflnet.Sky.Flipper
             buckets);
         static Prometheus.Histogram receiveTime = Prometheus.Metrics.CreateHistogram("sky_flipper_auction_receive_seconds", "Seconds that the flipper received an auction. (should be close to 0)",
             buckets);
-        
+
         public DateTime LastLiveProbe = DateTime.Now;
 
         static FlipperEngine()
@@ -99,6 +99,8 @@ namespace Coflnet.Sky.Flipper
                     {
                         await Task.Yield();
                         Console.WriteLine("starting worker");
+                        var scheduler = new LimitedConcurrencyLevelTaskScheduler(1);
+                        var taskFactory = new TaskFactory(scheduler);
                         while (!cancleToken.IsCancellationRequested)
                         {
                             try
@@ -108,11 +110,17 @@ namespace Coflnet.Sky.Flipper
                                 if (cr == null)
                                     continue;
                                 var tracer = OpenTracing.Util.GlobalTracer.Instance;
+                                var parent = tracer.Extract(BuiltinFormats.TextMap, cr.Message.Value.TraceContext);
                                 var span = OpenTracing.Util.GlobalTracer.Instance.BuildSpan("SearchFlip")
-                                        .AsChildOf(tracer.Extract(BuiltinFormats.TextMap, cr.Message.Value.TraceContext));
-
-                                using (var scope = span.StartActive())
-                                    await ProcessSingleFlip(p, cr);
+                                        .AsChildOf(parent);
+                                var receiveSpan = OpenTracing.Util.GlobalTracer.Instance.BuildSpan("ReceiveAuction")
+                                        .AsChildOf(parent).Start();
+                                taskFactory.StartNew(async () =>
+                                {
+                                    receiveSpan.Finish();
+                                    using (var scope = span.StartActive())
+                                        await ProcessSingleFlip(p, cr);
+                                });
 
                                 //c.Commit(new TopicPartitionOffset[] { cr.TopicPartitionOffset });
                                 if (cr.Offset.Value % 500 == 0)

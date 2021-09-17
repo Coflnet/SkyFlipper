@@ -13,9 +13,7 @@ namespace Coflnet.Sky.Flipper
         }
         protected override Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            var first = Flipper.FlipperEngine.Instance.ProcessPotentialFlipps(stoppingToken);
-            var second = Flipper.FlipperEngine.Instance.ProcessPotentialFlipps(stoppingToken);
-            return Task.WhenAll(first, second);
+            return Flipper.FlipperEngine.Instance.ProcessPotentialFlipps(stoppingToken);
         }
     }
 }
