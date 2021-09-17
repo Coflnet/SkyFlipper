@@ -93,14 +93,12 @@ namespace Coflnet.Sky.Flipper
                 using (var c = new ConsumerBuilder<Ignore, SaveAuction>(conf).SetValueDeserializer(SerializerFactory.GetDeserializer<SaveAuction>()).Build())
                 using (var p = new ProducerBuilder<string, FlipInstance>(producerConfig).SetValueSerializer(SerializerFactory.GetSerializer<FlipInstance>()).Build())
                 {
-                    //var factory = new TaskFactory(new LimitedConcurrencyLevelTaskScheduler(1));
                     c.Subscribe(NewAuctionTopic);
                     try
                     {
                         await Task.Yield();
                         Console.WriteLine("starting worker");
-                        var scheduler = new LimitedConcurrencyLevelTaskScheduler(1);
-                        var taskFactory = new TaskFactory(scheduler);
+                        var taskFactory = new TaskFactory(new LimitedConcurrencyLevelTaskScheduler(2));
                         while (!cancleToken.IsCancellationRequested)
                         {
                             try
