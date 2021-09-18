@@ -98,7 +98,7 @@ namespace Coflnet.Sky.Flipper
                     {
                         await Task.Yield();
                         Console.WriteLine("starting worker");
-                        var taskFactory = new TaskFactory(new LimitedConcurrencyLevelTaskScheduler(2));
+                        var taskFactory = new TaskFactory(new LimitedConcurrencyLevelTaskScheduler(3));
                         while (!cancleToken.IsCancellationRequested)
                         {
                             try
@@ -248,7 +248,7 @@ namespace Coflnet.Sky.Flipper
                 MedianPrice = (int)medianPrice * auction.Count,
                 Name = auction.ItemName,
                 Uuid = auction.Uuid,
-                LastKnownCost = (int)price,
+                LastKnownCost = (int)price * auction.Count,
                 Volume = (float)(relevantAuctions.Count / (DateTime.Now - oldest).TotalDays),
                 Tag = auction.Tag,
                 Bin = auction.Bin,
