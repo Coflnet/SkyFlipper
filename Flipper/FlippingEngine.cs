@@ -294,8 +294,11 @@ namespace Coflnet.Sky.Flipper
             }
 
             var referenceAuctions = await GetRelevantAuctions(auction, context);
-            // this could be shifted to another thread
-            await CacheService.Instance.SaveInRedis<(List<SaveAuction>, DateTime)>(key, referenceAuctions, TimeSpan.FromHours(1));
+            // shifted out of the critical path
+            if (referenceAuctions.Item1.Count > 1)
+            {
+                var saveTask = CacheService.Instance.SaveInRedis<(List<SaveAuction>, DateTime)>(key, referenceAuctions, TimeSpan.FromHours(1));
+            }
             return referenceAuctions;
         }
 
