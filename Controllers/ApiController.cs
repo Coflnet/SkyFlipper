@@ -24,7 +24,7 @@ namespace Coflnet.Sky.Flipper.Controllers
         }
 
         [HttpGet]
-        [Route("{uuid}/based")]
+        [Route("/flip/{uuid}/based")]
         public async Task<IEnumerable<SaveAuction>> Get(string uuid)
         {
             var auction = AuctionService.Instance.GetAuction(uuid,
