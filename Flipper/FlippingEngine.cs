@@ -276,7 +276,7 @@ namespace Coflnet.Sky.Flipper
         /// <returns></returns>
         public async Task<(List<SaveAuction>, DateTime)> GetRelevantAuctionsCache(SaveAuction auction, HypixelContext context)
         {
-            var key = $"{auction.ItemId}{auction.ItemName}{auction.Tier}{auction.Bin}{auction.Count}";
+            var key = $"n{auction.ItemId}{auction.ItemName}{auction.Tier}{auction.Bin}{auction.Count}";
             key += String.Concat(auction.Enchantments.Select(a => $"{a.Type}{a.Level}"));
             key += String.Concat(auction.FlatenedNBT.Where(d => !new string[] { "uid", "spawnedFor", "bossId" }.Contains(d.Key)));
             try
