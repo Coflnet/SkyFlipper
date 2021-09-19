@@ -254,7 +254,7 @@ namespace Coflnet.Sky.Flipper
             }
             filters["Rarity"] = auction.Tier.ToString();
 
-            var exactLowestTask = ItemPrices.GetLowestBin(itemTag, auction.Tier);
+            var exactLowestTask = ItemPrices.GetLowestBin(itemTag, filters);
             List<ItemPrices.AuctionPreview> lowestBin = await ItemPrices.GetLowestBin(itemTag, auction.Tier);
             var exactLowest = await exactLowestTask;
             if(exactLowest.Count > 1)
@@ -396,6 +396,8 @@ namespace Coflnet.Sky.Flipper
             ItemReferences.Reforge.Giant
         };
         // include pet items lucky clover, shemlet, quick cloth, golden cloth, buble gum, text book
+        // include gemstone (just add the bazaar price)
+        // include scrolls
 
         private static IQueryable<SaveAuction> GetSelect(
             SaveAuction auction,
