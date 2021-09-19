@@ -241,7 +241,26 @@ namespace Coflnet.Sky.Flipper
             }
             var itemTag = auction.Tag;
             var name = PlayerSearch.Instance.GetNameWithCacheAsync(auction.AuctioneerId);
+            var filters = new Dictionary<string,string>();
+            var ulti = auction.Enchantments.Where(e => UltimateEnchants.ContainsKey(e.Type)).FirstOrDefault();
+            if(ulti != null)
+            {
+                filters["Enchantment"] = ulti.Type.ToString();
+                filters["EnchantLvl"] = ulti.Level.ToString();
+            }
+            if(relevantReforges.Contains(auction.Reforge))
+            {
+                filters["Reforge"] = auction.Reforge.ToString();
+            }
+            filters["Rarity"] = auction.Tier.ToString();
+
+            var exactLowestTask = ItemPrices.GetLowestBin(itemTag, auction.Tier);
             List<ItemPrices.AuctionPreview> lowestBin = await ItemPrices.GetLowestBin(itemTag, auction.Tier);
+            var exactLowest = await exactLowestTask;
+            if(exactLowest.Count > 1)
+            {
+                lowestBin = exactLowest;
+            }
 
             var flip = new FlipInstance()
             {
@@ -355,12 +374,28 @@ namespace Coflnet.Sky.Flipper
             return (relevantAuctions, oldest);
         }
 
+        // Godly on armor
+        // fabled 
+        // toolsmith 
+        // precise
+        // Renowned
+        // Treacherous
+        // lucky on fishing rods
+        // Spiritual about a mil
+        // Gilded like 12 m
+        // Silky, shaded on  talisman
+        // fleet, Auspicious from reforge ..
+        // toil
+        // fruitful, blessed, moil (on axe), warped (on aotv or aote)
+        // submerged, withered, stellar (picaxe/dril), lucky, jaded (sorrow armor and divan, maybe just above some tier)
+        // ambered
         private readonly static HashSet<ItemReferences.Reforge> relevantReforges = new HashSet<ItemReferences.Reforge>()
         {
             ItemReferences.Reforge.ancient,
             ItemReferences.Reforge.Necrotic,
             ItemReferences.Reforge.Giant
         };
+        // include pet items lucky clover, shemlet, quick cloth, golden cloth, buble gum, text book
 
         private static IQueryable<SaveAuction> GetSelect(
             SaveAuction auction,
