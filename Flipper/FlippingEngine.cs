@@ -257,7 +257,7 @@ namespace Coflnet.Sky.Flipper
             var exactLowestTask = ItemPrices.GetLowestBin(itemTag, filters);
             List<ItemPrices.AuctionPreview> lowestBin = await ItemPrices.GetLowestBin(itemTag, auction.Tier);
             var exactLowest = await exactLowestTask;
-            if(exactLowest.Count > 1)
+            if(exactLowest?.Count > 1)
             {
                 lowestBin = exactLowest;
             }
