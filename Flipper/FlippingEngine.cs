@@ -375,24 +375,29 @@ namespace Coflnet.Sky.Flipper
         }
 
         // Godly on armor
-        // fabled 
         // toolsmith 
         // precise
         // Renowned
         // Treacherous
         // lucky on fishing rods
         // Spiritual about a mil
-        // Gilded like 12 m
         // Silky, shaded on  talisman
         // fleet, Auspicious from reforge ..
-        // toil
-        // fruitful, blessed, moil (on axe), warped (on aotv or aote)
-        // submerged, withered, stellar (picaxe/dril), lucky, jaded (sorrow armor and divan, maybe just above some tier)
+        // fruitful, blessed
+        // submerged, withered, stellar (picaxe/dril), lucky
         // ambered
         private readonly static HashSet<ItemReferences.Reforge> relevantReforges = new HashSet<ItemReferences.Reforge>()
         {
             ItemReferences.Reforge.ancient,
             ItemReferences.Reforge.Necrotic,
+            ItemReferences.Reforge.Gilded,
+            ItemReferences.Reforge.withered,
+            ItemReferences.Reforge.Spiritual,
+            ItemReferences.Reforge.jaded, // (sorrow armor and divan, maybe just above some tier)
+            ItemReferences.Reforge.warped, // for aote
+            ItemReferences.Reforge.toil,
+            ItemReferences.Reforge.moil, // on axe
+            ItemReferences.Reforge.Fabled,
             ItemReferences.Reforge.Giant
         };
         // include pet items lucky clover, shemlet, quick cloth, golden cloth, buble gum, text book
