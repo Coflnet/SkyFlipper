@@ -466,6 +466,10 @@ namespace Coflnet.Sky.Flipper
             if (auction.Tag.Contains("HOE") || flatNbt.ContainsKey("farming_for_dummies_count"))
                 select = AddNBTSelect(select, flatNbt, "farming_for_dummies_count");
 
+            if (auction.Tag.StartsWith("DIVAN") 
+                || auction.Tag == "GEMSTONE_GAUNTLET" 
+                || flatNbt.ContainsKey("unlocked_slots"))
+                select = AddNBTSelect(select, flatNbt, "unlocked_slots");
 
             select = AddEnchantmentSubselect(auction, matchingCount, highLvlEnchantList, select, ultiLevel, ultiType);
             if (limit == 0)
