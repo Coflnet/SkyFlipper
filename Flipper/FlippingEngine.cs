@@ -476,6 +476,9 @@ namespace Coflnet.Sky.Flipper
                 || flatNbt.ContainsKey("unlocked_slots"))
                 select = AddNBTSelect(select, flatNbt, "unlocked_slots");
 
+            if (flatNbt.ContainsKey("rarity_upgrades"))
+                select = AddNBTSelect(select, flatNbt, "rarity_upgrades");
+
             select = AddEnchantmentSubselect(auction, matchingCount, highLvlEnchantList, select, ultiLevel, ultiType);
             if (limit == 0)
                 return select;

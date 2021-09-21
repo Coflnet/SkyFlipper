@@ -46,6 +46,8 @@ namespace Coflnet.Sky.Flipper
                 properties.Add(new Property("HPB: " + data["hpc"], 12));
             if (data.ContainsKey("rarity_upgrades"))
                 properties.Add(new Property("Recombobulated ", 12));
+            if (data.Count > 1)
+                properties.Add(new Property($"Count x{data.Count}", 12));
             if (data.ContainsKey("heldItem"))
                 properties.Add(new Property($"Holds {ItemDetails.TagToName(data["heldItem"])}", 12));
             if (data.ContainsKey("candyUsed"))
