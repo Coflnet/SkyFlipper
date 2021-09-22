@@ -41,7 +41,7 @@ namespace Coflnet.Sky.Flipper.Controllers
         [Route("/status")]
         public IActionResult Status(string uuid)
         {
-            if(FlipperEngine.Instance.LastLiveProbe < DateTime.Now - TimeSpan.FromMinutes(2))
+            if(FlipperEngine.Instance.LastLiveProbe < DateTime.Now - TimeSpan.FromMinutes(2.5))
                 return StatusCode(500);
             return Ok();
         }
