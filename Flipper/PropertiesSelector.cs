@@ -55,13 +55,13 @@ namespace Coflnet.Sky.Flipper
             if (data.ContainsKey("farming_for_dummies_count"))
                 properties.Add(new Property($"Farming for dummies {data["farming_for_dummies_count"]}", 11));
 
-                
+
             var isBook = auction.Tag == "ENCHANTED_BOOK";
 
             properties.AddRange(auction.Enchantments.Where(e => isBook || FlipperEngine.UltimateEnchants.ContainsKey(e.Type) || e.Level > 5).Select(e => new Property()
             {
                 Value = $"{ItemDetails.TagToName(e.Type.ToString())}: {e.Level}",
-                Rating = 2 + e.Level + (FlipperEngine.UltimateEnchants.ContainsKey(e.Type) ? 5 : 0)
+                Rating = 2 + e.Level + (FlipperEngine.UltimateEnchants.ContainsKey(e.Type) ? 5 : 0) + (e.Type == Enchantment.EnchantmentType.infinite_quiver ? -3 : 0)
             }));
 
             return properties;

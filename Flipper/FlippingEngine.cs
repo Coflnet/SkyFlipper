@@ -166,7 +166,6 @@ namespace Coflnet.Sky.Flipper
                 });
                 runtroughTime.Observe(timetofind);
             }
-
         }
 
         private uint _auctionCounter = 0;
@@ -179,13 +178,10 @@ namespace Coflnet.Sky.Flipper
             return LowPriceQueue.TryDequeue(out auction);
         }
 
-
-
         public ConcurrentDictionary<long, List<long>> relevantAuctionIds = new ConcurrentDictionary<long, List<long>>();
 
         public async System.Threading.Tasks.Task<FlipInstance> NewAuction(SaveAuction auction, HypixelContext context)
         {
-
             // blacklist
             if (auction.ItemName == "null")
                 return null;
@@ -225,9 +221,6 @@ namespace Coflnet.Sky.Flipper
                                 .FirstOrDefault();
             }
 
-
-
-
             var recomendedBuyUnder = medianPrice * 0.8;
             if (price > recomendedBuyUnder) // at least 20% profit
             {
@@ -241,14 +234,14 @@ namespace Coflnet.Sky.Flipper
             }
             var itemTag = auction.Tag;
             var name = PlayerSearch.Instance.GetNameWithCacheAsync(auction.AuctioneerId);
-            var filters = new Dictionary<string,string>();
+            var filters = new Dictionary<string, string>();
             var ulti = auction.Enchantments.Where(e => UltimateEnchants.ContainsKey(e.Type)).FirstOrDefault();
-            if(ulti != null)
+            if (ulti != null)
             {
                 filters["Enchantment"] = ulti.Type.ToString();
                 filters["EnchantLvl"] = ulti.Level.ToString();
             }
-            if(relevantReforges.Contains(auction.Reforge))
+            if (relevantReforges.Contains(auction.Reforge))
             {
                 filters["Reforge"] = auction.Reforge.ToString();
             }
@@ -257,7 +250,7 @@ namespace Coflnet.Sky.Flipper
             var exactLowestTask = ItemPrices.GetLowestBin(itemTag, filters);
             List<ItemPrices.AuctionPreview> lowestBin = await ItemPrices.GetLowestBin(itemTag, auction.Tier);
             var exactLowest = await exactLowestTask;
-            if(exactLowest?.Count > 1)
+            if (exactLowest?.Count > 1)
             {
                 lowestBin = exactLowest;
             }
@@ -374,35 +367,7 @@ namespace Coflnet.Sky.Flipper
             return (relevantAuctions, oldest);
         }
 
-        // Godly on armor
-        // toolsmith 
-        // precise
-        // Renowned
-        // Treacherous
-        // lucky on fishing rods
-        // Spiritual about a mil
-        // Silky, shaded on  talisman
-        // fleet, Auspicious from reforge ..
-        // fruitful, blessed
-        // submerged, withered, stellar (picaxe/dril), lucky
-        // ambered
-        private readonly static HashSet<ItemReferences.Reforge> relevantReforges = new HashSet<ItemReferences.Reforge>()
-        {
-            ItemReferences.Reforge.ancient,
-            ItemReferences.Reforge.Necrotic,
-            ItemReferences.Reforge.Gilded,
-            ItemReferences.Reforge.withered,
-            ItemReferences.Reforge.Spiritual,
-            ItemReferences.Reforge.jaded, // (sorrow armor and divan, maybe just above some tier)
-            ItemReferences.Reforge.warped, // for aote
-            ItemReferences.Reforge.toil,
-            ItemReferences.Reforge.moil, // on axe
-            ItemReferences.Reforge.Fabled,
-            ItemReferences.Reforge.Giant
-        };
-        // include pet items lucky clover, shemlet, quick cloth, golden cloth, buble gum, text book
-        // include gemstone (just add the bazaar price)
-        // include scrolls
+        private readonly static HashSet<ItemReferences.Reforge> relevantReforges = Coflnet.Sky.Constants.RelevantReforges;
 
         private static IQueryable<SaveAuction> GetSelect(
             SaveAuction auction,
@@ -471,13 +436,23 @@ namespace Coflnet.Sky.Flipper
             if (auction.Tag.Contains("HOE") || flatNbt.ContainsKey("farming_for_dummies_count"))
                 select = AddNBTSelect(select, flatNbt, "farming_for_dummies_count");
 
-            if (auction.Tag.StartsWith("DIVAN") 
-                || auction.Tag == "GEMSTONE_GAUNTLET" 
+            if (auction.Tag.StartsWith("DIVAN")
+                || auction.Tag == "GEMSTONE_GAUNTLET"
                 || flatNbt.ContainsKey("unlocked_slots"))
                 select = AddNBTSelect(select, flatNbt, "unlocked_slots");
 
             if (flatNbt.ContainsKey("rarity_upgrades"))
                 select = AddNBTSelect(select, flatNbt, "rarity_upgrades");
+
+            if (flatNbt.ContainsKey("heldItem"))
+            {
+                var keyId = NBT.GetLookupKey("heldItem");
+                var val = ItemDetails.Instance.GetItemIdForName(flatNbt["heldItem"]);
+                select = select.Where(a => a.NBTLookup.Where(n => n.KeyId == keyId && n.Value == val).Any());
+            }
+
+            if (flatNbt.ContainsKey("gemstone_slots"))
+                select = AddNBTSelect(select, flatNbt, "gemstone_slots");
 
             select = AddEnchantmentSubselect(auction, matchingCount, highLvlEnchantList, select, ultiLevel, ultiType);
             if (limit == 0)
