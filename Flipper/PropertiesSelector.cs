@@ -54,7 +54,12 @@ namespace Coflnet.Sky.Flipper
                 properties.Add(new Property($"Candy Used {data["candyUsed"]}", 11));
             if (data.ContainsKey("farming_for_dummies_count"))
                 properties.Add(new Property($"Farming for dummies {data["farming_for_dummies_count"]}", 11));
-
+            if (data.ContainsKey("skin"))
+                properties.Add(new Property($"Skin: {ItemDetails.TagToName(data["skin"])}", 15));
+            if (data.ContainsKey("spider_kills"))
+                properties.Add(new Property($"Kills: {ItemDetails.TagToName(data["spider_kills"])}", 15));
+            if (data.ContainsKey("zombie_kills"))
+                properties.Add(new Property($"Kills: {ItemDetails.TagToName(data["zombie_kills"])}", 15));
 
             var isBook = auction.Tag == "ENCHANTED_BOOK";
 

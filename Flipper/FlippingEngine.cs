@@ -443,6 +443,10 @@ namespace Coflnet.Sky.Flipper
 
             if (flatNbt.ContainsKey("rarity_upgrades"))
                 select = AddNBTSelect(select, flatNbt, "rarity_upgrades");
+            if (flatNbt.ContainsKey("ethermerge"))
+                select = AddNBTSelect(select, flatNbt, "ethermerge");
+
+
 
             if (flatNbt.ContainsKey("heldItem"))
             {
@@ -450,6 +454,34 @@ namespace Coflnet.Sky.Flipper
                 var val = ItemDetails.Instance.GetItemIdForName(flatNbt["heldItem"]);
                 select = select.Where(a => a.NBTLookup.Where(n => n.KeyId == keyId && n.Value == val).Any());
             }
+
+            if (flatNbt.ContainsKey("skin"))
+            {
+                var keyId = NBT.GetLookupKey("skin");
+                var val = NBT.GetItemIdForSkin(flatNbt["skin"]);
+                select = select.Where(a => a.NBTLookup.Where(n => n.KeyId == keyId && n.Value == val).Any());
+            }
+
+            if (flatNbt.ContainsKey("color"))
+            {
+                var keyId = NBT.GetLookupKey("color");
+                var val = NBT.GetColor(flatNbt["color"]);
+                select = select.Where(a => a.NBTLookup.Where(n => n.KeyId == keyId && n.Value == val).Any());
+            }
+
+            foreach (var item in flatNbt)
+            {
+                if (item.Key.EndsWith("_kills"))
+                {
+                    var keyId = NBT.GetLookupKey(item.Key);
+                    var val = Int32.Parse(item.Value);
+                    var max = val * 1.2;
+                    var min = val * 0.8;
+                    select = select.Where(a => a.NBTLookup.Where(n => n.KeyId == keyId && n.Value >= min && n.Value < max).Any());
+                }
+            }
+
+
 
             if (flatNbt.ContainsKey("gemstone_slots"))
                 select = AddNBTSelect(select, flatNbt, "gemstone_slots");
@@ -502,11 +534,11 @@ namespace Coflnet.Sky.Flipper
                         .Where(e => (e.Level > 5 && highLvlEnchantList.Contains(e.Type)
                                     || e.Type == ultiType && e.Level == ultiLevel)).Count() >= matchingCount
                                     && a.Enchantments.Where(e => UltiEnchantList.Contains(e.Type) || e.Level > 5).Count() <= maxImportantEnchants);
-            else if (auction.Enchantments?.Count == 1)
+            else if (auction.Enchantments?.Count == 1 && auction.Tag == "ENCHANTED_BOOK")
                 select = select.Where(a => a.Enchantments != null && a.Enchantments.Count() == 1
                         && a.Enchantments.First().Type == auction.Enchantments.First().Type
                         && a.Enchantments.First().Level == auction.Enchantments.First().Level);
-            else if (auction.Enchantments?.Count == 2)
+            else if (auction.Enchantments?.Count == 2 && auction.Tag == "ENCHANTED_BOOK")
             {
                 select = select.Where(a => a.Enchantments != null && a.Enchantments.Count() == 2
                         && a.Enchantments.Where(e =>
