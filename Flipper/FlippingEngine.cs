@@ -107,11 +107,17 @@ namespace Coflnet.Sky.Flipper
                                 var cr = c.Consume(cancleToken);
                                 if (cr == null)
                                     continue;
+
                                 var tracer = OpenTracing.Util.GlobalTracer.Instance;
-                                var parent = tracer.Extract(BuiltinFormats.TextMap, cr.Message.Value.TraceContext);
-                                var span = OpenTracing.Util.GlobalTracer.Instance.BuildSpan("SearchFlip")
+                                OpenTracing.ISpanContext parent;
+                                if (cr.Message.Value.TraceContext == null)
+                                    parent = tracer.BuildSpan("mock").StartActive().Span.Context;
+                                else
+                                    parent = tracer.Extract(BuiltinFormats.TextMap, cr.Message.Value.TraceContext);
+
+                                var span = tracer.BuildSpan("SearchFlip")
                                         .AsChildOf(parent);
-                                var receiveSpan = OpenTracing.Util.GlobalTracer.Instance.BuildSpan("ReceiveAuction")
+                                var receiveSpan = tracer.BuildSpan("ReceiveAuction")
                                         .AsChildOf(parent).Start();
                                 taskFactory.StartNew(async () =>
                                 {
