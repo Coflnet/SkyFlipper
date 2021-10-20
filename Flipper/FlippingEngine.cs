@@ -41,15 +41,15 @@ namespace Coflnet.Sky.Flipper
                     .CreateCounter("already_sold_flips", "Flips that were already sold for premium users for some reason");
         Prometheus.Histogram time = Prometheus.Metrics.CreateHistogram("time_to_find_flip", "How long did it take to find a flip", new Prometheus.HistogramConfiguration()
         {
-            Buckets = Prometheus.Histogram.LinearBuckets(start: 20, width: 15, count: 10)
+            Buckets = Prometheus.Histogram.LinearBuckets(start: 10, width: 15, count: 10)
         });
         static Prometheus.HistogramConfiguration buckets = new Prometheus.HistogramConfiguration()
         {
-            Buckets = Prometheus.Histogram.LinearBuckets(start: 0, width: 2, count: 10)
+            Buckets = Prometheus.Histogram.LinearBuckets(start: 4, width: 5, count: 10)
         };
-        static Prometheus.Histogram runtroughTime = Prometheus.Metrics.CreateHistogram("sky_flipper_auction_to_send_flip_seconds", "Seconds from loading the auction to finding the flip. (should be close to 0)",
+        static Prometheus.Histogram runtroughTime = Prometheus.Metrics.CreateHistogram("sky_flipper_auction_to_send_flip_seconds", "Seconds from loading the auction to finding the flip. (should be close to 10)",
             buckets);
-        static Prometheus.Histogram receiveTime = Prometheus.Metrics.CreateHistogram("sky_flipper_auction_receive_seconds", "Seconds that the flipper received an auction. (should be close to 0)",
+        static Prometheus.Histogram receiveTime = Prometheus.Metrics.CreateHistogram("sky_flipper_auction_receive_seconds", "Seconds that the flipper received an auction. (should be close to 10)",
             buckets);
 
         public DateTime LastLiveProbe = DateTime.Now;
