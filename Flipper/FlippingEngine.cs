@@ -41,11 +41,11 @@ namespace Coflnet.Sky.Flipper
                     .CreateCounter("already_sold_flips", "Flips that were already sold for premium users for some reason");
         Prometheus.Histogram time = Prometheus.Metrics.CreateHistogram("time_to_find_flip", "How long did it take to find a flip", new Prometheus.HistogramConfiguration()
         {
-            Buckets = Prometheus.Histogram.LinearBuckets(start: 10, width: 15, count: 10)
+            Buckets = Prometheus.Histogram.LinearBuckets(start: 10, width: 2, count: 10)
         });
         static Prometheus.HistogramConfiguration buckets = new Prometheus.HistogramConfiguration()
         {
-            Buckets = Prometheus.Histogram.LinearBuckets(start: 4, width: 5, count: 10)
+            Buckets = Prometheus.Histogram.LinearBuckets(start: 10, width: 2, count: 10)
         };
         static Prometheus.Histogram runtroughTime = Prometheus.Metrics.CreateHistogram("sky_flipper_auction_to_send_flip_seconds", "Seconds from loading the auction to finding the flip. (should be close to 10)",
             buckets);
@@ -281,7 +281,7 @@ namespace Coflnet.Sky.Flipper
 
             foundFlipCount.Inc();
 
-            time.Observe((DateTime.Now - auction.Start).TotalSeconds);
+            time.Observe((DateTime.Now - auction.FindTime).TotalSeconds);
             return flip;
         }
 
@@ -451,6 +451,10 @@ namespace Coflnet.Sky.Flipper
                 select = AddNBTSelect(select, flatNbt, "rarity_upgrades");
             if (flatNbt.ContainsKey("ethermerge"))
                 select = AddNBTSelect(select, flatNbt, "ethermerge");
+
+                
+            if (flatNbt.ContainsKey("new_years_cake"))
+                select = AddNBTSelect(select, flatNbt, "new_years_cake");
 
 
 
