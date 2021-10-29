@@ -13,7 +13,8 @@ WORKDIR /app
 
 COPY --from=build /build/sky/bin/release/net5.0/publish/ .
 RUN mkdir -p ah/files
+ENV ASPNETCORE_URLS=http://+:8000;http://+:80
 
-ENTRYPOINT ["dotnet", "SkyFlipper.dll"]
+ENTRYPOINT ["dotnet", "SkyFlipper.dll", "--hostBuilder:reloadConfigOnChange=false"]
 
 VOLUME /data
