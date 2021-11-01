@@ -451,8 +451,9 @@ namespace Coflnet.Sky.Flipper
                 select = AddNBTSelect(select, flatNbt, "rarity_upgrades");
             if (flatNbt.ContainsKey("ethermerge"))
                 select = AddNBTSelect(select, flatNbt, "ethermerge");
+            if (flatNbt.ContainsKey("edition"))
+                select = AddNbtRangeSelect(ref select, flatNbt, "edition", 100, 10);
 
-                
             if (flatNbt.ContainsKey("new_years_cake"))
                 select = AddNBTSelect(select, flatNbt, "new_years_cake");
 
@@ -519,9 +520,25 @@ namespace Coflnet.Sky.Flipper
 
         private static IQueryable<SaveAuction> AddMidasSelect(IQueryable<SaveAuction> select, Dictionary<string, string> flatNbt, string keyValue)
         {
+            var maxDiff = 2_000_000;
+            return AddNbtRangeSelect(ref select, flatNbt, keyValue, maxDiff);
+        }
+
+        /// <summary>
+        /// Adds a range select to get relevant auctions
+        /// </summary>
+        /// <param name="select">the db select</param>
+        /// <param name="flatNbt">flat nbt of the target tiem</param>
+        /// <param name="keyValue">The NBTkey to use</param>
+        /// <param name="maxDiff">By how much the range is extended in both directions</param>
+        /// <param name="percentIncrease">How many percent difference should be added to maxDiff</param>
+        /// <returns></returns>
+        private static IQueryable<SaveAuction> AddNbtRangeSelect(ref IQueryable<SaveAuction> select, Dictionary<string, string> flatNbt, string keyValue, long maxDiff, int percentIncrease = 0)
+        {
             var val = long.Parse(flatNbt[keyValue]);
             var keyId = NBT.GetLookupKey(keyValue);
-            select = select.Where(a => a.NBTLookup.Where(n => n.KeyId == keyId && n.Value > val - 2_000_000 && n.Value < val + 2_000_000).Any());
+            maxDiff += val * percentIncrease;
+            select = select.Where(a => a.NBTLookup.Where(n => n.KeyId == keyId && n.Value > val - maxDiff && n.Value < val + maxDiff).Any());
             return select;
         }
 
