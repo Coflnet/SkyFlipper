@@ -326,8 +326,10 @@ namespace Coflnet.Sky.Flipper
             var clearedName = auction.Reforge != ItemReferences.Reforge.None ? ItemReferences.RemoveReforge(auction.ItemName) : auction.ItemName;
             var itemId = ItemDetails.Instance.GetItemIdForName(auction.Tag, false);
             var youngest = DateTime.Now;
-            var relevantEnchants = auction.Enchantments?.Where(e => UltimateEnchants.ContainsKey(e.Type) || e.Level >= 6).ToList();
-            var matchingCount = relevantEnchants.Count > 2 ? relevantEnchants.Count / 2 : relevantEnchants.Count;
+            var relevantEnchants = auction.Enchantments?.Where(e => UltimateEnchants.ContainsKey(e.Type) || e.Level >= 6)
+                .Where(e=>e.Type != Enchantment.EnchantmentType.infinite_quiver && e.Type != Enchantment.EnchantmentType.feather_falling)
+                .ToList();
+            var matchingCount = relevantEnchants.Count > 3 ? relevantEnchants.Count * 2 / 3 : relevantEnchants.Count;
             var ulti = relevantEnchants.Where(e => UltimateEnchants.ContainsKey(e.Type)).FirstOrDefault();
             var highLvlEnchantList = relevantEnchants.Where(e => !UltimateEnchants.ContainsKey(e.Type)).Select(a => a.Type).ToList();
             var oldest = DateTime.Now - TimeSpan.FromHours(1);
@@ -495,7 +497,7 @@ namespace Coflnet.Sky.Flipper
             if (canHaveGemstones
                 || flatNbt.ContainsKey("unlocked_slots"))
                 select = AddNBTSelect(select, flatNbt, "unlocked_slots");
-                
+
             if (canHaveGemstones || flatNbt.ContainsKey("gemstone_slots"))
                 select = AddNBTSelect(select, flatNbt, "gemstone_slots");
 
