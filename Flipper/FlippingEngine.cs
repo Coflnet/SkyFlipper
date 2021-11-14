@@ -23,6 +23,7 @@ namespace Coflnet.Sky.Flipper
         public static readonly string ProduceTopic = SimplerConfig.Config.Instance["TOPICS:FLIP"];
         public static readonly string NewAuctionTopic = SimplerConfig.Config.Instance["TOPICS:NEW_AUCTION"];
         public static readonly string KafkaHost = SimplerConfig.Config.Instance["KAFKA_HOST"];
+        public static readonly string LowPricedAuctionTopic = SimplerConfig.Config.Instance["TOPICS:LOW_PRICED"];
         /// <summary>
         /// List of ultimate enchantments
         /// </summary>
@@ -91,6 +92,7 @@ namespace Coflnet.Sky.Flipper
                 };
 
                 using (var c = new ConsumerBuilder<Ignore, SaveAuction>(conf).SetValueDeserializer(SerializerFactory.GetDeserializer<SaveAuction>()).Build())
+                using (var lpp = new ProducerBuilder<string, LowPricedAuction>(producerConfig).SetValueSerializer(SerializerFactory.GetSerializer<LowPricedAuction>()).Build())
                 using (var p = new ProducerBuilder<string, FlipInstance>(producerConfig).SetValueSerializer(SerializerFactory.GetSerializer<FlipInstance>()).Build())
                 {
                     c.Subscribe(NewAuctionTopic);
@@ -123,7 +125,7 @@ namespace Coflnet.Sky.Flipper
                                 {
                                     receiveSpan.Finish();
                                     using (var scope = span.StartActive())
-                                        await ProcessSingleFlip(p, cr);
+                                        await ProcessSingleFlip(p, cr, lpp);
                                 });
 
                                 //c.Commit(new TopicPartitionOffset[] { cr.TopicPartitionOffset });
@@ -154,14 +156,14 @@ namespace Coflnet.Sky.Flipper
             }
         }
 
-        private async Task ProcessSingleFlip(IProducer<string, FlipInstance> p, ConsumeResult<Ignore, SaveAuction> cr)
+        private async Task ProcessSingleFlip(IProducer<string, FlipInstance> p, ConsumeResult<Ignore, SaveAuction> cr, IProducer<string, LowPricedAuction> lpp)
         {
             receiveTime.Observe((DateTime.Now - cr.Message.Value.FindTime).TotalSeconds);
 
             using var scope = serviceFactory.CreateScope();
             var context = scope.ServiceProvider.GetRequiredService<HypixelContext>();
 
-            var flip = await NewAuction(cr.Message.Value, context);
+            var flip = await NewAuction(cr.Message.Value, context, lpp);
             if (flip != null)
             {
                 var timetofind = (DateTime.Now - flip.Auction.FindTime).TotalSeconds;
@@ -186,7 +188,7 @@ namespace Coflnet.Sky.Flipper
 
         public ConcurrentDictionary<long, List<long>> relevantAuctionIds = new ConcurrentDictionary<long, List<long>>();
 
-        public async System.Threading.Tasks.Task<FlipInstance> NewAuction(SaveAuction auction, HypixelContext context)
+        public async System.Threading.Tasks.Task<FlipInstance> NewAuction(SaveAuction auction, HypixelContext context, IProducer<string, LowPricedAuction> lpp)
         {
             // blacklist
             if (auction.ItemName == "null")
@@ -228,6 +230,10 @@ namespace Coflnet.Sky.Flipper
             }
 
             var recomendedBuyUnder = medianPrice * 0.9;
+            if(recomendedBuyUnder < 1_000_000)
+            {
+                recomendedBuyUnder *= 0.9;
+            }
             if (price > recomendedBuyUnder) // at least 10% profit
             {
                 return null; // not a good flip
@@ -238,6 +244,21 @@ namespace Coflnet.Sky.Flipper
             {
                 relevantAuctionIds.Clear();
             }
+
+            var lowPrices = new LowPricedAuction()
+            {
+                Auction = auction,
+                DailyVolume = (float)(relevantAuctions.Count / (DateTime.Now - oldest).TotalDays),
+                Finder = LowPricedAuction.FinderType.FLIPPER,
+                TargetPrice = (int)medianPrice * auction.Count
+            };
+
+            lpp.Produce(LowPricedAuctionTopic,new Message<string, LowPricedAuction>(){
+                Key = auction.Uuid,
+                Value = lowPrices
+            });
+
+
             var itemTag = auction.Tag;
             var name = PlayerSearch.Instance.GetNameWithCacheAsync(auction.AuctioneerId);
             var filters = new Dictionary<string, string>();
@@ -327,7 +348,7 @@ namespace Coflnet.Sky.Flipper
             var itemId = ItemDetails.Instance.GetItemIdForName(auction.Tag, false);
             var youngest = DateTime.Now;
             var relevantEnchants = auction.Enchantments?.Where(e => UltimateEnchants.ContainsKey(e.Type) || e.Level >= 6)
-                .Where(e=>e.Type != Enchantment.EnchantmentType.infinite_quiver && e.Type != Enchantment.EnchantmentType.feather_falling)
+                .Where(e => e.Type != Enchantment.EnchantmentType.infinite_quiver && e.Type != Enchantment.EnchantmentType.feather_falling)
                 .ToList();
             var matchingCount = relevantEnchants.Count > 3 ? relevantEnchants.Count * 2 / 3 : relevantEnchants.Count;
             var ulti = relevantEnchants.Where(e => UltimateEnchants.ContainsKey(e.Type)).FirstOrDefault();
