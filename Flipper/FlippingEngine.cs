@@ -227,8 +227,8 @@ namespace Coflnet.Sky.Flipper
                                 .FirstOrDefault();
             }
 
-            var recomendedBuyUnder = medianPrice * 0.8;
-            if (price > recomendedBuyUnder) // at least 20% profit
+            var recomendedBuyUnder = medianPrice * 0.9;
+            if (price > recomendedBuyUnder) // at least 10% profit
             {
                 return null; // not a good flip
             }
