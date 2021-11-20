@@ -467,7 +467,7 @@ namespace Coflnet.Sky.Flipper
 
             if (flatNbt.ContainsKey("rarity_upgrades"))
                 select = AddNBTSelect(select, flatNbt, "rarity_upgrades");
-            if (flatNbt.ContainsKey("ethermerge"))
+            if (auction.Tag == "ASPECT_OF_THE_VOID" || auction.Tag == "ASPECT_OF_THE_END")
                 select = AddNBTSelect(select, flatNbt, "ethermerge");
             if (flatNbt.ContainsKey("edition"))
                 select = AddNbtRangeSelect(ref select, flatNbt, "edition", 100, 10);
