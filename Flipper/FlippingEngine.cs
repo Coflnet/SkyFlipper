@@ -35,7 +35,6 @@ namespace Coflnet.Sky.Flipper
         static private List<Enchantment.EnchantmentType> UltiEnchantList = new List<Enchantment.EnchantmentType>();
         internal IServiceScopeFactory serviceFactory;
 
-
         Prometheus.Counter foundFlipCount = Prometheus.Metrics
                     .CreateCounter("flips_found", "Number of flips found");
         Prometheus.Counter alreadySold = Prometheus.Metrics
