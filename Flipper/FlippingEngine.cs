@@ -346,7 +346,7 @@ namespace Coflnet.Sky.Flipper
             var clearedName = auction.Reforge != ItemReferences.Reforge.None ? ItemReferences.RemoveReforge(auction.ItemName) : auction.ItemName;
             var itemId = ItemDetails.Instance.GetItemIdForName(auction.Tag, false);
             var youngest = DateTime.Now;
-            var relevantEnchants = auction.Enchantments?.Where(e => Coflnet.Sky.Constants.RelevantEnchants.Where(el => el.Type == e.Type && el.Level <= e.Level).Any() || e.Level >= 6)
+            var relevantEnchants = auction.Enchantments?.Where(e => UltimateEnchants.ContainsKey(e.Type) || e.Level >= 6)
                 .Where(e => e.Type != Enchantment.EnchantmentType.infinite_quiver && e.Type != Enchantment.EnchantmentType.feather_falling)
                 .ToList();
             var matchingCount = relevantEnchants.Count > 3 ? relevantEnchants.Count * 2 / 3 : relevantEnchants.Count;
