@@ -32,7 +32,7 @@ namespace Coflnet.Sky.Flipper
             
             services.AddDbContext<HypixelContext>(
                 dbContextOptions => dbContextOptions
-                    .UseMySQL(Configuration["DBCONNECTION"])
+                    .UseMySql(Configuration["DBCONNECTION"], new MariaDbServerVersion(Configuration["MARIADB_VERSION"]))
                     .EnableSensitiveDataLogging() // <-- These two calls are optional but help
                     .EnableDetailedErrors()       // <-- with debugging (remove for production).
             );

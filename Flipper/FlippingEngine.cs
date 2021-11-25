@@ -28,7 +28,9 @@ namespace Coflnet.Sky.Flipper
         /// List of ultimate enchantments
         /// </summary>
         public static ConcurrentDictionary<Enchantment.EnchantmentType, bool> UltimateEnchants = new ConcurrentDictionary<Enchantment.EnchantmentType, bool>();
+        public static ConcurrentDictionary<Enchantment.EnchantmentType, byte> RelevantEnchants = new ConcurrentDictionary<Enchantment.EnchantmentType, byte>();
 
+    
         private ConcurrentQueue<SaveAuction> PotetialFlipps = new ConcurrentQueue<SaveAuction>();
         private ConcurrentQueue<SaveAuction> LowPriceQueue = new ConcurrentQueue<SaveAuction>();
 
@@ -64,6 +66,10 @@ namespace Coflnet.Sky.Flipper
                     UltimateEnchants.TryAdd(item, true);
                     UltiEnchantList.Add(item);
                 }
+            }
+            foreach (var item in Coflnet.Sky.Constants.RelevantEnchants)
+            {
+                RelevantEnchants.AddOrUpdate(item.Type,item.Level,(k,o)=>item.Level);
             }
         }
 
@@ -346,8 +352,7 @@ namespace Coflnet.Sky.Flipper
             var clearedName = auction.Reforge != ItemReferences.Reforge.None ? ItemReferences.RemoveReforge(auction.ItemName) : auction.ItemName;
             var itemId = ItemDetails.Instance.GetItemIdForName(auction.Tag, false);
             var youngest = DateTime.Now;
-            var relevantEnchants = auction.Enchantments?.Where(e => UltimateEnchants.ContainsKey(e.Type) || e.Level >= 6)
-                .Where(e => e.Type != Enchantment.EnchantmentType.infinite_quiver && e.Type != Enchantment.EnchantmentType.feather_falling)
+            var relevantEnchants = auction.Enchantments?.Where(e => !RelevantEnchants.TryGetValue(e.Type, out byte lvl) && e.Level >= 6 || e.Level >= lvl)
                 .ToList();
             var matchingCount = relevantEnchants.Count > 3 ? relevantEnchants.Count * 2 / 3 : relevantEnchants.Count;
             var ulti = relevantEnchants.Where(e => UltimateEnchants.ContainsKey(e.Type)).FirstOrDefault();
