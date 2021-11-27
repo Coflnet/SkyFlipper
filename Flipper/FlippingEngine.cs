@@ -30,7 +30,7 @@ namespace Coflnet.Sky.Flipper
         public static ConcurrentDictionary<Enchantment.EnchantmentType, bool> UltimateEnchants = new ConcurrentDictionary<Enchantment.EnchantmentType, bool>();
         public static ConcurrentDictionary<Enchantment.EnchantmentType, byte> RelevantEnchants = new ConcurrentDictionary<Enchantment.EnchantmentType, byte>();
 
-    
+
         private ConcurrentQueue<SaveAuction> PotetialFlipps = new ConcurrentQueue<SaveAuction>();
         private ConcurrentQueue<SaveAuction> LowPriceQueue = new ConcurrentQueue<SaveAuction>();
 
@@ -69,7 +69,7 @@ namespace Coflnet.Sky.Flipper
             }
             foreach (var item in Coflnet.Sky.Constants.RelevantEnchants)
             {
-                RelevantEnchants.AddOrUpdate(item.Type,item.Level,(k,o)=>item.Level);
+                RelevantEnchants.AddOrUpdate(item.Type, item.Level, (k, o) => item.Level);
             }
         }
 
@@ -235,7 +235,7 @@ namespace Coflnet.Sky.Flipper
             }
 
             var recomendedBuyUnder = medianPrice * 0.9;
-            if(recomendedBuyUnder < 1_000_000)
+            if (recomendedBuyUnder < 1_000_000)
             {
                 recomendedBuyUnder *= 0.9;
             }
@@ -258,7 +258,8 @@ namespace Coflnet.Sky.Flipper
                 TargetPrice = (int)medianPrice * auction.Count
             };
 
-            lpp.Produce(LowPricedAuctionTopic,new Message<string, LowPricedAuction>(){
+            lpp.Produce(LowPricedAuctionTopic, new Message<string, LowPricedAuction>()
+            {
                 Key = auction.Uuid,
                 Value = lowPrices
             });
@@ -374,11 +375,13 @@ namespace Coflnet.Sky.Flipper
                 if (relevantAuctions.Count < 50 && PotetialFlipps.Count < 2000)
                 {
                     // to few auctions in a day, query a week
+                    youngest = oldest;
                     oldest = DateTime.Now - TimeSpan.FromDays(8);
-                    relevantAuctions = await GetSelect(auction, context, clearedName, itemId, youngest, matchingCount, ulti, highLvlEnchantList, oldest, auction.Reforge, 120)
-                    .ToListAsync();
+                    relevantAuctions.AddRange( await GetSelect(auction, context, clearedName, itemId, youngest, matchingCount, ulti, highLvlEnchantList, oldest, auction.Reforge, 120)
+                    .ToListAsync());
                     if (relevantAuctions.Count < 10 && clearedName.Contains("✪"))
                     {
+                        youngest = DateTime.Now;
                         clearedName = clearedName.Replace("✪", "").Trim();
                         relevantAuctions = await GetSelect(auction, context, clearedName, itemId, youngest, matchingCount, ulti, highLvlEnchantList, oldest, auction.Reforge, 120)
                         .ToListAsync();
@@ -431,6 +434,8 @@ namespace Coflnet.Sky.Flipper
 
             if (relevantReforges.Contains(reforge))
                 select = select.Where(a => a.Reforge == reforge);
+            else
+                select = select.Where(a => !relevantReforges.Contains(a.Reforge));
 
 
             if (auction.ItemName != clearedName && clearedName != null)
