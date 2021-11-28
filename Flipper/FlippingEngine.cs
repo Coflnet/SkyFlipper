@@ -55,6 +55,7 @@ namespace Coflnet.Sky.Flipper
             buckets);
 
         public DateTime LastLiveProbe = DateTime.Now;
+        private SemaphoreSlim throttler = new SemaphoreSlim(25);
 
         static FlipperEngine()
         {
@@ -105,7 +106,7 @@ namespace Coflnet.Sky.Flipper
                     {
                         await Task.Yield();
                         Console.WriteLine("starting worker");
-                        var taskFactory = new TaskFactory(new LimitedConcurrencyLevelTaskScheduler(3));
+                        var taskFactory = new TaskFactory(new LimitedConcurrencyLevelTaskScheduler(2));
                         while (!cancleToken.IsCancellationRequested)
                         {
                             try
@@ -165,10 +166,14 @@ namespace Coflnet.Sky.Flipper
         {
             receiveTime.Observe((DateTime.Now - cr.Message.Value.FindTime).TotalSeconds);
 
-            using var scope = serviceFactory.CreateScope();
-            var context = scope.ServiceProvider.GetRequiredService<HypixelContext>();
+            await throttler.WaitAsync();
 
-            var flip = await NewAuction(cr.Message.Value, context, lpp);
+            FlipInstance flip = null;
+            using (var scope = serviceFactory.CreateScope())
+            using (var context = scope.ServiceProvider.GetRequiredService<HypixelContext>())
+            {
+                flip = await NewAuction(cr.Message.Value, context, lpp);
+            }
             if (flip != null)
             {
                 var timetofind = (DateTime.Now - flip.Auction.FindTime).TotalSeconds;
@@ -179,6 +184,7 @@ namespace Coflnet.Sky.Flipper
                 });
                 runtroughTime.Observe(timetofind);
             }
+            throttler.Release();
         }
 
         private uint _auctionCounter = 0;
@@ -377,7 +383,7 @@ namespace Coflnet.Sky.Flipper
                     // to few auctions in a day, query a week
                     youngest = oldest;
                     oldest = DateTime.Now - TimeSpan.FromDays(8);
-                    relevantAuctions.AddRange( await GetSelect(auction, context, clearedName, itemId, youngest, matchingCount, ulti, highLvlEnchantList, oldest, auction.Reforge, 120)
+                    relevantAuctions.AddRange(await GetSelect(auction, context, clearedName, itemId, youngest, matchingCount, ulti, highLvlEnchantList, oldest, auction.Reforge, 120)
                     .ToListAsync());
                     if (relevantAuctions.Count < 10 && clearedName.Contains("✪"))
                     {
