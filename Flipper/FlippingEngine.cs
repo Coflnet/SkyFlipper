@@ -71,7 +71,9 @@ namespace Coflnet.Sky.Flipper
             foreach (var item in Coflnet.Sky.Constants.RelevantEnchants)
             {
                 RelevantEnchants.AddOrUpdate(item.Type, item.Level, (k, o) => item.Level);
+                Console.WriteLine(item.Type.ToString() + " " + item.Level);
             }
+
         }
 
 
@@ -115,7 +117,6 @@ namespace Coflnet.Sky.Flipper
                                 var cr = c.Consume(cancleToken);
                                 if (cr == null)
                                     continue;
-
                                 var tracer = OpenTracing.Util.GlobalTracer.Instance;
                                 OpenTracing.ISpanContext parent;
                                 if (cr.Message.Value.TraceContext == null)
@@ -135,10 +136,11 @@ namespace Coflnet.Sky.Flipper
                                     try
                                     {
                                         await ProcessSingleFlip(p, cr, lpp);
-                                    } catch(Exception e)
+                                    }
+                                    catch (Exception e)
                                     {
                                         dev.Logger.Instance.Error(e, "flip search");
-                                        scope.Span.SetTag("error","true").Log(e.Message).Log(e.StackTrace);
+                                        scope.Span.SetTag("error", "true").Log(e.Message).Log(e.StackTrace);
                                     }
                                     finally
                                     {
@@ -358,7 +360,7 @@ namespace Coflnet.Sky.Flipper
             // shifted out of the critical path
             if (referenceAuctions.Item1.Count > 1)
             {
-                var saveTask = CacheService.Instance.SaveInRedis<(List<SaveAuction>, DateTime)>(key, referenceAuctions, TimeSpan.FromHours(1));
+                var saveTask = CacheService.Instance.SaveInRedis<(List<SaveAuction>, DateTime)>(key, referenceAuctions, TimeSpan.FromHours(0.0001));
             }
             return referenceAuctions;
         }
@@ -369,14 +371,13 @@ namespace Coflnet.Sky.Flipper
             var clearedName = auction.Reforge != ItemReferences.Reforge.None ? ItemReferences.RemoveReforge(auction.ItemName) : auction.ItemName;
             var itemId = ItemDetails.Instance.GetItemIdForName(auction.Tag, false);
             var youngest = DateTime.Now;
-            var relevantEnchants = auction.Enchantments?.Where(e => !RelevantEnchants.TryGetValue(e.Type, out byte lvl) && e.Level >= 6 || e.Level >= lvl)
-                .ToList();
+            List<Enchantment> relevantEnchants = ExtractRelevantEnchants(auction);
             var matchingCount = relevantEnchants.Count > 3 ? relevantEnchants.Count * 2 / 3 : relevantEnchants.Count;
             var ulti = relevantEnchants.Where(e => UltimateEnchants.ContainsKey(e.Type)).FirstOrDefault();
             var highLvlEnchantList = relevantEnchants.Where(e => !UltimateEnchants.ContainsKey(e.Type)).Select(a => a.Type).ToList();
             var oldest = DateTime.Now - TimeSpan.FromHours(1);
 
-            IQueryable<SaveAuction> select = GetSelect(auction, context, clearedName, itemId, youngest, matchingCount, ulti, highLvlEnchantList, oldest, auction.Reforge, 10);
+            IQueryable<SaveAuction> select = GetSelect(auction, context, clearedName, itemId, youngest, matchingCount, ulti, relevantEnchants, oldest, auction.Reforge, 10);
 
             var relevantAuctions = await select
                 .ToListAsync();
@@ -385,7 +386,7 @@ namespace Coflnet.Sky.Flipper
             {
                 // to few auctions in last hour, try a whole day
                 oldest = DateTime.Now - TimeSpan.FromDays(1.5);
-                relevantAuctions = await GetSelect(auction, context, clearedName, itemId, youngest, matchingCount, ulti, highLvlEnchantList, oldest, auction.Reforge, 90)
+                relevantAuctions = await GetSelect(auction, context, clearedName, itemId, youngest, matchingCount, ulti, relevantEnchants, oldest, auction.Reforge, 90)
                 .ToListAsync();
 
                 if (relevantAuctions.Count < 50 && PotetialFlipps.Count < 2000)
@@ -393,13 +394,13 @@ namespace Coflnet.Sky.Flipper
                     // to few auctions in a day, query a week
                     youngest = oldest;
                     oldest = DateTime.Now - TimeSpan.FromDays(8);
-                    relevantAuctions.AddRange(await GetSelect(auction, context, clearedName, itemId, youngest, matchingCount, ulti, highLvlEnchantList, oldest, auction.Reforge, 120)
+                    relevantAuctions.AddRange(await GetSelect(auction, context, clearedName, itemId, youngest, matchingCount, ulti, relevantEnchants, oldest, auction.Reforge, 120)
                     .ToListAsync());
                     if (relevantAuctions.Count < 10 && clearedName.Contains("✪"))
                     {
                         youngest = DateTime.Now;
                         clearedName = clearedName.Replace("✪", "").Trim();
-                        relevantAuctions = await GetSelect(auction, context, clearedName, itemId, youngest, matchingCount, ulti, highLvlEnchantList, oldest, auction.Reforge, 120)
+                        relevantAuctions = await GetSelect(auction, context, clearedName, itemId, youngest, matchingCount, ulti, relevantEnchants, oldest, auction.Reforge, 120)
                         .ToListAsync();
                     }
                 }
@@ -419,6 +420,12 @@ namespace Coflnet.Sky.Flipper
             return (relevantAuctions, oldest);
         }
 
+        public static List<Enchantment> ExtractRelevantEnchants(SaveAuction auction)
+        {
+            return auction.Enchantments?.Where(e => (!RelevantEnchants.ContainsKey(e.Type) && e.Level >= 6) || (RelevantEnchants.TryGetValue(e.Type, out byte lvl)) && e.Level >= lvl)
+                .ToList();
+        }
+
         private readonly static HashSet<ItemReferences.Reforge> relevantReforges = Coflnet.Sky.Constants.RelevantReforges;
 
         private static IQueryable<SaveAuction> GetSelect(
@@ -429,7 +436,7 @@ namespace Coflnet.Sky.Flipper
             DateTime youngest,
             int matchingCount,
             Enchantment ulti,
-            List<Enchantment.EnchantmentType> highLvlEnchantList,
+            List<Enchantment> highLvlEnchantList,
             DateTime oldest,
             ItemReferences.Reforge reforge,
             int limit = 60)
@@ -563,7 +570,9 @@ namespace Coflnet.Sky.Flipper
             var keyId = NBT.GetLookupKey(keyValue);
             if (!flatNbt.ContainsKey(keyValue))
                 return select.Where(a => !a.NBTLookup.Where(n => n.KeyId == keyId).Any());
-            var val = long.Parse(flatNbt[keyValue]);
+
+            if (!long.TryParse(flatNbt[keyValue], out long val))
+                val = NBT.GetValueId(keyId, flatNbt[keyValue]);
             select = select.Where(a => a.NBTLookup.Where(n => n.KeyId == keyId && n.Value == val).Any());
             return select;
         }
@@ -603,14 +612,42 @@ namespace Coflnet.Sky.Flipper
             return select;
         }
 
-        private static IQueryable<SaveAuction> AddEnchantmentSubselect(SaveAuction auction, int matchingCount, List<Enchantment.EnchantmentType> highLvlEnchantList, IQueryable<SaveAuction> select, byte ultiLevel, Enchantment.EnchantmentType ultiType)
+        private static IQueryable<SaveAuction> AddEnchantmentSubselect(SaveAuction auction, int matchingCount, List<Enchantment> highLvlEnchantList, IQueryable<SaveAuction> select, byte ultiLevel, Enchantment.EnchantmentType ultiType)
         {
-            var maxImportantEnchants = highLvlEnchantList.Count() + 1 + (ultiType == Enchantment.EnchantmentType.unknown ? 0 : 1);
-            if (matchingCount > 0)
+
+            var relevant = RelevantEnchants.Select(r => r.Key).ToList();
+            matchingCount = highLvlEnchantList.Count > 1 ? highLvlEnchantList.Count - 1 : 1;
+            if (highLvlEnchantList.Count() > 0)
+            {
+                var maxImportantEnchants = highLvlEnchantList.Count() + 1 + (ultiType == Enchantment.EnchantmentType.unknown ? 0 : 1);
+                if (highLvlEnchantList.Where(f => f.Type == Enchantment.EnchantmentType.feather_falling).Any())
+                    throw new Exception("WTF FEATHERFALLING");
+                Console.WriteLine(auction.Uuid + " matching " + JSON.Stringify(highLvlEnchantList));
+                var highLevel = highLvlEnchantList.Select(r => new { r.Type, r.Level }).ToList();
+                var highLvlHash = highLvlEnchantList.Select(r => r.Type).ToHashSet();
+
+                var minLvl1 = GetMinLvl(highLvlEnchantList, 1);
+                var minLvl2 = GetMinLvl(highLvlEnchantList, 2);
+                var minLvl3 = GetMinLvl(highLvlEnchantList, 3);
+                var minLvl4 = GetMinLvl(highLvlEnchantList, 4);
+                var minLvl5 = GetMinLvl(highLvlEnchantList, 5);
+                var minLvl6 = GetMinLvl6(auction);
+                var minLvl7 = GetMinLvl(highLvlEnchantList, 7);
+
                 select = select.Where(a => a.Enchantments
-                        .Where(e => (e.Level > 5 && highLvlEnchantList.Contains(e.Type)
-                                    || e.Type == ultiType && e.Level == ultiLevel)).Count() >= matchingCount
-                                    && a.Enchantments.Where(e => UltiEnchantList.Contains(e.Type) || e.Level > 5).Count() <= maxImportantEnchants);
+                        .Where(e => //relevant.Where(r => r.Key == e.Type && e.Level >= r.Value).Any() &&  // relevant enchant of references
+                                    //highLevel.Where(r => r.Type == e.Type && e.Level == r.Level).Any()
+                                    (ultiType == Enchantment.EnchantmentType.unknown || ultiType == e.Type && ultiLevel == e.Level)
+                                    &&
+                                    (minLvl1.Contains(e.Type) && e.Level == 1
+                                        || minLvl2.Contains(e.Type) && e.Level == 2
+                                        || minLvl3.Contains(e.Type) && e.Level == 3
+                                        || minLvl4.Contains(e.Type) && e.Level == 4
+                                        || minLvl5.Contains(e.Type) && e.Level == 5
+                                        || minLvl6.Contains(e.Type) && e.Level == 6
+                                        || minLvl7.Contains(e.Type) && e.Level == 7)
+                                    ).Count() >= matchingCount);
+            }
             else if (auction.Enchantments?.Count == 1 && auction.Tag == "ENCHANTED_BOOK")
                 select = select.Where(a => a.Enchantments != null && a.Enchantments.Count() == 1
                         && a.Enchantments.First().Type == auction.Enchantments.First().Type
@@ -625,14 +662,22 @@ namespace Coflnet.Sky.Flipper
 
             // make sure we exclude special enchants to get a reasonable price
             else if (auction.Enchantments.Any())
-                select = select.Where(a => !a.Enchantments.Where(e => UltiEnchantList.Contains(e.Type) || e.Level > 5).Any());
+                select = select.Where(a => !a.Enchantments.Where(e => relevant.Contains(e.Type) || e.Level > 5).Any());
             else
                 select = select.Where(a => !a.Enchantments.Any());
             return select;
         }
 
+        private static HashSet<Enchantment.EnchantmentType> GetMinLvl(List<Enchantment> highLvlEnchantList, int lvl)
+        {
+            return highLvlEnchantList.Where(e => e.Level == lvl).Select(e => e.Type).ToHashSet();
+        }
 
-
+        private static HashSet<Enchantment.EnchantmentType> GetMinLvl6(SaveAuction auction)
+        {
+            // may make a problem for nonrelevant 7+
+            return auction.Enchantments.Where(e => e.Level >= 6 && !RelevantEnchants.ContainsKey(e.Type)).Select(e => e.Type).ToHashSet();
+        }
 
         private static ProducerConfig producerConfig = new ProducerConfig
         {

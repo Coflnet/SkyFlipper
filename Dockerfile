@@ -6,6 +6,7 @@ WORKDIR /build/sky
 COPY SkyFlipper.csproj SkyFlipper.csproj
 RUN dotnet restore
 COPY . .
+RUN dotnet test
 RUN dotnet publish -c release
 
 FROM mcr.microsoft.com/dotnet/aspnet:6.0
