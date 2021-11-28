@@ -127,11 +127,23 @@ namespace Coflnet.Sky.Flipper
                                         .AsChildOf(parent);
                                 var receiveSpan = tracer.BuildSpan("ReceiveAuction")
                                         .AsChildOf(parent).Start();
-                                taskFactory.StartNew(async () =>
+                                var findingTask = taskFactory.StartNew(async () =>
                                 {
                                     receiveSpan.Finish();
-                                    using (var scope = span.StartActive())
+                                    using var scope = span.StartActive();
+                                    await throttler.WaitAsync();
+                                    try
+                                    {
                                         await ProcessSingleFlip(p, cr, lpp);
+                                    } catch(Exception e)
+                                    {
+                                        dev.Logger.Instance.Error(e, "flip search");
+                                        scope.Span.SetTag("error","true").Log(e.Message).Log(e.StackTrace);
+                                    }
+                                    finally
+                                    {
+                                        throttler.Release();
+                                    }
                                 });
 
                                 //c.Commit(new TopicPartitionOffset[] { cr.TopicPartitionOffset });
@@ -166,7 +178,6 @@ namespace Coflnet.Sky.Flipper
         {
             receiveTime.Observe((DateTime.Now - cr.Message.Value.FindTime).TotalSeconds);
 
-            await throttler.WaitAsync();
 
             FlipInstance flip = null;
             using (var scope = serviceFactory.CreateScope())
@@ -184,7 +195,6 @@ namespace Coflnet.Sky.Flipper
                 });
                 runtroughTime.Observe(timetofind);
             }
-            throttler.Release();
         }
 
         private uint _auctionCounter = 0;
