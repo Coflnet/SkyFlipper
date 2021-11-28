@@ -620,9 +620,6 @@ namespace Coflnet.Sky.Flipper
             if (highLvlEnchantList.Count() > 0)
             {
                 var maxImportantEnchants = highLvlEnchantList.Count() + 1 + (ultiType == Enchantment.EnchantmentType.unknown ? 0 : 1);
-                if (highLvlEnchantList.Where(f => f.Type == Enchantment.EnchantmentType.feather_falling).Any())
-                    throw new Exception("WTF FEATHERFALLING");
-                Console.WriteLine(auction.Uuid + " matching " + JSON.Stringify(highLvlEnchantList));
                 var highLevel = highLvlEnchantList.Select(r => new { r.Type, r.Level }).ToList();
                 var highLvlHash = highLvlEnchantList.Select(r => r.Type).ToHashSet();
 
