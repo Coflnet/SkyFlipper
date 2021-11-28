@@ -331,6 +331,7 @@ namespace Coflnet.Sky.Flipper
         }
 
 
+        private static HashSet<string> ignoredNbt = new HashSet<string>(){ "uid", "spawnedFor", "bossId","itemCreatedAt" };
         /// <summary>
         /// Gets relevant items for an auction, checks cache first
         /// </summary>
@@ -340,8 +341,12 @@ namespace Coflnet.Sky.Flipper
         public async Task<(List<SaveAuction>, DateTime)> GetRelevantAuctionsCache(SaveAuction auction, HypixelContext context)
         {
             var key = $"n{auction.ItemId}{auction.ItemName}{auction.Tier}{auction.Bin}{auction.Count}";
-            key += String.Concat(auction.Enchantments.Select(a => $"{a.Type}{a.Level}"));
-            key += String.Concat(auction.FlatenedNBT.Where(d => !new string[] { "uid", "spawnedFor", "bossId" }.Contains(d.Key)));
+            var relevant = ExtractRelevantEnchants(auction);
+            if (relevant.Count() == 0)
+                key += String.Concat(auction.Enchantments.Select(a => $"{a.Type}{a.Level}"));
+            else
+                key += String.Concat(relevant.Select(a => $"{a.Type}{a.Level}"));
+            key += String.Concat(auction.FlatenedNBT.Where(d => !ignoredNbt.Contains(d.Key)));
             try
             {
                 var fromCache = await CacheService.Instance.GetFromRedis<(List<SaveAuction>, DateTime)>(key);
@@ -360,7 +365,7 @@ namespace Coflnet.Sky.Flipper
             // shifted out of the critical path
             if (referenceAuctions.Item1.Count > 1)
             {
-                var saveTask = CacheService.Instance.SaveInRedis<(List<SaveAuction>, DateTime)>(key, referenceAuctions, TimeSpan.FromHours(0.0001));
+                var saveTask = CacheService.Instance.SaveInRedis<(List<SaveAuction>, DateTime)>(key, referenceAuctions, TimeSpan.FromHours(1));
             }
             return referenceAuctions;
         }
@@ -617,6 +622,8 @@ namespace Coflnet.Sky.Flipper
 
             var relevant = RelevantEnchants.Select(r => r.Key).ToList();
             matchingCount = highLvlEnchantList.Count > 1 ? highLvlEnchantList.Count - 1 : 1;
+            if (highLvlEnchantList.Count == 2)
+                matchingCount = 2;
             if (highLvlEnchantList.Count() > 0)
             {
                 var maxImportantEnchants = highLvlEnchantList.Count() + 1 + (ultiType == Enchantment.EnchantmentType.unknown ? 0 : 1);
