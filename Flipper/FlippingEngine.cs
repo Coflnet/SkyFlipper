@@ -515,6 +515,8 @@ namespace Coflnet.Sky.Flipper
                 select = AddNBTSelect(select, flatNbt, "new_years_cake");
             if (flatNbt.ContainsKey("dungeon_item_level"))
                 select = AddNBTSelect(select, flatNbt, "dungeon_item_level");
+            if (flatNbt.ContainsKey("candyUsed"))
+                select = AddCandySelect(select, flatNbt, "candyUsed");
 
 
 
@@ -585,6 +587,15 @@ namespace Coflnet.Sky.Flipper
             return select;
         }
 
+        private static IQueryable<SaveAuction> AddCandySelect(IQueryable<SaveAuction> select, Dictionary<string, string> flatNbt, string keyValue)
+        {
+            var keyId = NBT.GetLookupKey(keyValue);
+            long.TryParse(flatNbt[keyValue], out long val)
+            if(val > 0)
+                return select.Where(a => a.NBTLookup.Where(n => n.KeyId == keyId && n.Value > 0).Any());
+            return select.Where(a => a.NBTLookup.Where(n => n.KeyId == keyId && n.Value == 0).Any());
+        }
+
         private static IQueryable<SaveAuction> AddMidasSelect(IQueryable<SaveAuction> select, Dictionary<string, string> flatNbt, string keyValue)
         {
             var maxDiff = 2_000_000;
@@ -653,7 +664,7 @@ namespace Coflnet.Sky.Flipper
                                         || minLvl5.Contains(e.Type) && e.Level == 5
                                         || minLvl6.Contains(e.Type) && e.Level == 6
                                         || minLvl7.Contains(e.Type) && e.Level == 7)
-                                    ).Count() >= matchingCount);
+                                    ).Count() == matchingCount);
             }
             else if (auction.Enchantments?.Count == 1 && auction.Tag == "ENCHANTED_BOOK")
                 select = select.Where(a => a.Enchantments != null && a.Enchantments.Count() == 1
