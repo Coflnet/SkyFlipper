@@ -590,7 +590,7 @@ namespace Coflnet.Sky.Flipper
         private static IQueryable<SaveAuction> AddCandySelect(IQueryable<SaveAuction> select, Dictionary<string, string> flatNbt, string keyValue)
         {
             var keyId = NBT.GetLookupKey(keyValue);
-            long.TryParse(flatNbt[keyValue], out long val)
+            long.TryParse(flatNbt[keyValue], out long val);
             if(val > 0)
                 return select.Where(a => a.NBTLookup.Where(n => n.KeyId == keyId && n.Value > 0).Any());
             return select.Where(a => a.NBTLookup.Where(n => n.KeyId == keyId && n.Value == 0).Any());
