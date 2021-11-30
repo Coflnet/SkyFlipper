@@ -17,11 +17,13 @@ namespace Coflnet.Sky.Flipper
                 Enchantments = new List<Enchantment>() {
                     new Enchantment(Enchantment.EnchantmentType.cleave, 4),
                     new Enchantment(Enchantment.EnchantmentType.cubism, 6),
-                    new Enchantment(Enchantment.EnchantmentType.ultimate_bank, 1) }
+                    new Enchantment(Enchantment.EnchantmentType.ultimate_one_for_all, 1),
+                    new Enchantment(Enchantment.EnchantmentType.snipe, 4) }
             }).Select(e => e.Type).ToList();
             Console.WriteLine(JSON.Stringify(test));
-            CollectionAssert.Contains(test,Enchantment.EnchantmentType.ultimate_bank);
+            CollectionAssert.Contains(test,Enchantment.EnchantmentType.ultimate_one_for_all);
             CollectionAssert.Contains(test,Enchantment.EnchantmentType.cubism);
+            CollectionAssert.Contains(test,Enchantment.EnchantmentType.snipe);
             CollectionAssert.DoesNotContain(test,Enchantment.EnchantmentType.cleave);
         }
     }
