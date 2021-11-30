@@ -525,6 +525,10 @@ namespace Coflnet.Sky.Flipper
                 var keyId = NBT.GetLookupKey("heldItem");
                 var val = ItemDetails.Instance.GetItemIdForName(flatNbt["heldItem"]);
                 select = select.Where(a => a.NBTLookup.Where(n => n.KeyId == keyId && n.Value == val).Any());
+            } else if(flatNbt.ContainsKey("candyUsed")) // every pet has candyUsed attribute
+            {
+                var keyId = NBT.GetLookupKey("heldItem");
+                select = select.Where(a => !a.NBTLookup.Where(n => n.KeyId == keyId).Any());
             }
 
             if (flatNbt.ContainsKey("skin"))
