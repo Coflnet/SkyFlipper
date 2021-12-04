@@ -6,6 +6,7 @@ using hypixel;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using OpenTracing.Util;
 
 namespace Coflnet.Sky.Flipper.Controllers
 {
@@ -33,7 +34,7 @@ namespace Coflnet.Sky.Flipper.Controllers
                 .Include(a => a.Enchantments));
             using (var context = new HypixelContext())
             {
-                return (await FlipperEngine.Instance.GetRelevantAuctionsCache(auction, dbContext)).Item1;
+                return (await FlipperEngine.Instance.GetRelevantAuctionsCache(auction, dbContext,GlobalTracer.Instance.ActiveSpan)).Item1;
             }
         }
 

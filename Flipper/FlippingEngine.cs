@@ -47,7 +47,7 @@ namespace Coflnet.Sky.Flipper
         });
         static Prometheus.HistogramConfiguration buckets = new Prometheus.HistogramConfiguration()
         {
-            Buckets = Prometheus.Histogram.LinearBuckets(start: 10, width: 2, count: 10)
+            Buckets = Prometheus.Histogram.LinearBuckets(start: 10, width: 1, count: 10)
         };
         static Prometheus.Histogram runtroughTime = Prometheus.Metrics.CreateHistogram("sky_flipper_auction_to_send_flip_seconds", "Seconds from loading the auction to finding the flip. (should be close to 10)",
             buckets);
@@ -124,18 +124,19 @@ namespace Coflnet.Sky.Flipper
                                 else
                                     parent = tracer.Extract(BuiltinFormats.TextMap, cr.Message.Value.TraceContext);
 
-                                var span = tracer.BuildSpan("SearchFlip")
-                                        .AsChildOf(parent);
                                 var receiveSpan = tracer.BuildSpan("ReceiveAuction")
                                         .AsChildOf(parent).Start();
                                 var findingTask = taskFactory.StartNew(async () =>
                                 {
                                     receiveSpan.Finish();
+
+                                    var span = tracer.BuildSpan("SearchFlip")
+                                            .WithTag("uuid", cr.Message.Value.Uuid);
                                     using var scope = span.StartActive();
                                     await throttler.WaitAsync();
                                     try
                                     {
-                                        await ProcessSingleFlip(p, cr, lpp);
+                                        await ProcessSingleFlip(p, cr, lpp, scope);
                                     }
                                     catch (Exception e)
                                     {
@@ -176,7 +177,7 @@ namespace Coflnet.Sky.Flipper
             }
         }
 
-        private async Task ProcessSingleFlip(IProducer<string, FlipInstance> p, ConsumeResult<Ignore, SaveAuction> cr, IProducer<string, LowPricedAuction> lpp)
+        private async Task ProcessSingleFlip(IProducer<string, FlipInstance> p, ConsumeResult<Ignore, SaveAuction> cr, IProducer<string, LowPricedAuction> lpp, OpenTracing.IScope span)
         {
             receiveTime.Observe((DateTime.Now - cr.Message.Value.FindTime).TotalSeconds);
 
@@ -185,7 +186,7 @@ namespace Coflnet.Sky.Flipper
             using (var scope = serviceFactory.CreateScope())
             using (var context = scope.ServiceProvider.GetRequiredService<HypixelContext>())
             {
-                flip = await NewAuction(cr.Message.Value, context, lpp);
+                flip = await NewAuction(cr.Message.Value, context, lpp, span);
             }
             if (flip != null)
             {
@@ -211,7 +212,7 @@ namespace Coflnet.Sky.Flipper
 
         public ConcurrentDictionary<long, List<long>> relevantAuctionIds = new ConcurrentDictionary<long, List<long>>();
 
-        public async System.Threading.Tasks.Task<FlipInstance> NewAuction(SaveAuction auction, HypixelContext context, IProducer<string, LowPricedAuction> lpp)
+        public async System.Threading.Tasks.Task<FlipInstance> NewAuction(SaveAuction auction, HypixelContext context, IProducer<string, LowPricedAuction> lpp, OpenTracing.IScope span)
         {
             // blacklist
             if (auction.ItemName == "null")
@@ -229,7 +230,7 @@ namespace Coflnet.Sky.Flipper
             if (auction.NBTLookup == null || auction.NBTLookup.Count() == 0)
                 auction.NBTLookup = NBT.CreateLookup(auction);
 
-            var (relevantAuctions, oldest) = await GetRelevantAuctionsCache(auction, context);
+            var (relevantAuctions, oldest) = await GetRelevantAuctionsCache(auction, context, span.Span);
 
             long medianPrice = 0;
             if (relevantAuctions.Count < 2)
@@ -273,7 +274,8 @@ namespace Coflnet.Sky.Flipper
                 Auction = auction,
                 DailyVolume = (float)(relevantAuctions.Count / (DateTime.Now - oldest).TotalDays),
                 Finder = LowPricedAuction.FinderType.FLIPPER,
-                TargetPrice = (int)medianPrice * auction.Count
+                TargetPrice = (int)medianPrice * auction.Count,
+                AdditionalProps = new Dictionary<string, string>() { { "track", "fast" } }
             };
 
             lpp.Produce(LowPricedAuctionTopic, new Message<string, LowPricedAuction>()
@@ -305,6 +307,12 @@ namespace Coflnet.Sky.Flipper
             {
                 lowestBin = exactLowest;
             }
+            // prevent price manipulation
+            if (lowestBin?.FirstOrDefault()?.Price > medianPrice)
+            {
+                span.Span.SetTag("error", true).Log("lbin higher than median " + lowestBin?.FirstOrDefault()?.Uuid);
+                return null;
+            }
 
             var flip = new FlipInstance()
             {
@@ -331,7 +339,7 @@ namespace Coflnet.Sky.Flipper
         }
 
 
-        private static HashSet<string> ignoredNbt = new HashSet<string>() 
+        private static HashSet<string> ignoredNbt = new HashSet<string>()
                 { "uid", "spawnedFor", "bossId", "exp", "uuid" };
         /// <summary>
         /// Gets relevant items for an auction, checks cache first
@@ -339,7 +347,7 @@ namespace Coflnet.Sky.Flipper
         /// <param name="auction"></param>
         /// <param name="context"></param>
         /// <returns></returns>
-        public async Task<(List<SaveAuction>, DateTime)> GetRelevantAuctionsCache(SaveAuction auction, HypixelContext context)
+        public async Task<(List<SaveAuction>, DateTime)> GetRelevantAuctionsCache(SaveAuction auction, HypixelContext context, OpenTracing.ISpan span)
         {
             var key = $"n{auction.ItemId}{auction.ItemName}{auction.Tier}{auction.Bin}{auction.Count}";
             var relevant = ExtractRelevantEnchants(auction);
@@ -354,6 +362,7 @@ namespace Coflnet.Sky.Flipper
                 if (fromCache != default((List<SaveAuction>, DateTime)))
                 {
                     //Console.WriteLine("flip cache hit");
+                    span.SetTag("cache", true);
                     return fromCache;
                 }
             }
@@ -368,6 +377,7 @@ namespace Coflnet.Sky.Flipper
             {
                 var saveTask = CacheService.Instance.SaveInRedis<(List<SaveAuction>, DateTime)>(key, referenceAuctions, TimeSpan.FromHours(1));
             }
+            span.SetTag("cache", false);
             return referenceAuctions;
         }
 
@@ -525,7 +535,8 @@ namespace Coflnet.Sky.Flipper
                 var keyId = NBT.GetLookupKey("heldItem");
                 var val = ItemDetails.Instance.GetItemIdForName(flatNbt["heldItem"]);
                 select = select.Where(a => a.NBTLookup.Where(n => n.KeyId == keyId && n.Value == val).Any());
-            } else if(flatNbt.ContainsKey("candyUsed")) // every pet has candyUsed attribute
+            }
+            else if (flatNbt.ContainsKey("candyUsed")) // every pet has candyUsed attribute
             {
                 var keyId = NBT.GetLookupKey("heldItem");
                 select = select.Where(a => !a.NBTLookup.Where(n => n.KeyId == keyId).Any());
@@ -595,7 +606,7 @@ namespace Coflnet.Sky.Flipper
         {
             var keyId = NBT.GetLookupKey(keyValue);
             long.TryParse(flatNbt[keyValue], out long val);
-            if(val > 0)
+            if (val > 0)
                 return select.Where(a => a.NBTLookup.Where(n => n.KeyId == keyId && n.Value > 0).Any());
             return select.Where(a => a.NBTLookup.Where(n => n.KeyId == keyId && n.Value == 0).Any());
         }
