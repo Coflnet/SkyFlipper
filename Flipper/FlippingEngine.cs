@@ -668,8 +668,7 @@ namespace Coflnet.Sky.Flipper
                 var minLvl7 = GetMinLvl(highLvlEnchantList, 7);
 
                 select = select.Where(a => a.Enchantments
-                        .Where(e => //relevant.Where(r => r.Key == e.Type && e.Level >= r.Value).Any() &&  // relevant enchant of references
-                                    //highLevel.Where(r => r.Type == e.Type && e.Level == r.Level).Any()
+                        .Where(e => 
                                     (ultiType == Enchantment.EnchantmentType.unknown || ultiType == e.Type && ultiLevel == e.Level)
                                     &&
                                     (minLvl1.Contains(e.Type) && e.Level == 1
@@ -692,7 +691,6 @@ namespace Coflnet.Sky.Flipper
                             e.Type == auction.Enchantments[0].Type && e.Level == auction.Enchantments[0].Level
                             || e.Type == auction.Enchantments[1].Type && e.Level == auction.Enchantments[1].Level).Count() == 2);
             }
-
             // make sure we exclude special enchants to get a reasonable price
             else if (auction.Enchantments.Any())
                 select = select.Where(a => !a.Enchantments.Where(e => relevant.Contains(e.Type) || e.Level > 5).Any());
