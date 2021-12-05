@@ -231,7 +231,8 @@ namespace Coflnet.Sky.Flipper
             if (auction.NBTLookup == null || auction.NBTLookup.Count() == 0)
                 auction.NBTLookup = NBT.CreateLookup(auction);
 
-            var (relevantAuctions, oldest) = await GetRelevantAuctionsCache(auction, context, span.Span);
+            var trackingContext = new FindTracking() { Span = span.Span };
+            var (relevantAuctions, oldest) = await GetRelevantAuctionsCache(auction, context, trackingContext);
 
             long medianPrice = 0;
             if (relevantAuctions.Count < 2)
@@ -273,11 +274,11 @@ namespace Coflnet.Sky.Flipper
             }
 
             var additionalProps = new Dictionary<string, string>() { { "track", "fast" } };
-            if(additionalWorth > 0)
+            if (additionalWorth > 0)
             {
                 additionalProps["worth"] = additionalWorth.ToString();
             }
-            
+
             var lowPrices = new LowPricedAuction()
             {
                 Auction = auction,
@@ -356,7 +357,7 @@ namespace Coflnet.Sky.Flipper
                 var selects = gems.Select(async (g) =>
                 {
                     var type = g.Key.Split("_").First();
-                    if(type == "COMBAT" || type == "DEFENSIVE" || type == "UNIVERSAL")
+                    if (type == "COMBAT" || type == "DEFENSIVE" || type == "UNIVERSAL")
                         type = auction.FlatenedNBT[g.Key + "_gem"];
                     var route = $"/api/item/price/{g.Value}_{type}_GEM/current";
                     var result = await commandsClient.ExecuteGetAsync(new RestSharp.RestRequest(route));
@@ -382,7 +383,7 @@ namespace Coflnet.Sky.Flipper
         /// <param name="auction"></param>
         /// <param name="context"></param>
         /// <returns></returns>
-        public async Task<(List<SaveAuction>, DateTime)> GetRelevantAuctionsCache(SaveAuction auction, HypixelContext context, OpenTracing.ISpan span)
+        public async Task<(List<SaveAuction>, DateTime)> GetRelevantAuctionsCache(SaveAuction auction, HypixelContext context, FindTracking tracking)
         {
             var key = $"n{auction.ItemId}{auction.ItemName}{auction.Tier}{auction.Bin}{auction.Count}";
             var relevant = ExtractRelevantEnchants(auction);
@@ -397,7 +398,8 @@ namespace Coflnet.Sky.Flipper
                 if (fromCache != default((List<SaveAuction>, DateTime)))
                 {
                     //Console.WriteLine("flip cache hit");
-                    span.SetTag("cache", true);
+                    tracking.Tag("cache", "true");
+                    tracking.Tag("key", key);
                     return fromCache;
                 }
             }
@@ -412,7 +414,7 @@ namespace Coflnet.Sky.Flipper
             {
                 var saveTask = CacheService.Instance.SaveInRedis<(List<SaveAuction>, DateTime)>(key, referenceAuctions, TimeSpan.FromHours(1));
             }
-            span.SetTag("cache", false);
+            tracking.Tag("cache", "false");
             return referenceAuctions;
         }
 
@@ -699,8 +701,11 @@ namespace Coflnet.Sky.Flipper
                 var minLvl3 = GetMinLvl(highLvlEnchantList, 3);
                 var minLvl4 = GetMinLvl(highLvlEnchantList, 4);
                 var minLvl5 = GetMinLvl(highLvlEnchantList, 5);
-                var minLvl6 = GetMinLvl6(auction);
+                var minLvl6 = GetMinLvl(highLvlEnchantList, 6);
                 var minLvl7 = GetMinLvl(highLvlEnchantList, 7);
+                var minLvl8 = GetMinLvl(highLvlEnchantList, 8);
+                var minLvl9 = GetMinLvl(highLvlEnchantList, 9);
+                var minLvl10 = GetMinLvl(highLvlEnchantList, 10);
 
                 select = select.Where(a => a.Enchantments
                         .Where(e =>
@@ -712,7 +717,10 @@ namespace Coflnet.Sky.Flipper
                                         || minLvl4.Contains(e.Type) && e.Level == 4
                                         || minLvl5.Contains(e.Type) && e.Level == 5
                                         || minLvl6.Contains(e.Type) && e.Level == 6
-                                        || minLvl7.Contains(e.Type) && e.Level == 7)
+                                        || minLvl7.Contains(e.Type) && e.Level == 7
+                                        || minLvl8.Contains(e.Type) && e.Level == 8
+                                        || minLvl9.Contains(e.Type) && e.Level == 9
+                                        || minLvl10.Contains(e.Type) && e.Level == 10)
                                     ).Count() == matchingCount);
             }
             else if (auction.Enchantments?.Count == 1 && auction.Tag == "ENCHANTED_BOOK")
@@ -739,12 +747,6 @@ namespace Coflnet.Sky.Flipper
             return highLvlEnchantList.Where(e => e.Level == lvl).Select(e => e.Type).ToHashSet();
         }
 
-        private static HashSet<Enchantment.EnchantmentType> GetMinLvl6(SaveAuction auction)
-        {
-            // may make a problem for nonrelevant 7+
-            return auction.Enchantments.Where(e => e.Level >= 6 && !RelevantEnchants.ContainsKey(e.Type)).Select(e => e.Type).ToHashSet();
-        }
-
         private static ProducerConfig producerConfig = new ProducerConfig
         {
             BootstrapServers = SimplerConfig.Config.Instance["KAFKA_HOST"],
@@ -765,5 +767,17 @@ namespace Coflnet.Sky.Flipper
     public class CurrentPrice
     {
         public double sell { get; set; }
+    }
+
+    public class FindTracking
+    {
+        public OpenTracing.ISpan Span;
+        public Dictionary<string, string> Context = new Dictionary<string, string>();
+
+        internal void Tag(string key, string value)
+        {
+            Span?.SetTag(key, value);
+            Context[key] = value;
+        }
     }
 }

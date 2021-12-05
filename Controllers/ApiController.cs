@@ -34,7 +34,7 @@ namespace Coflnet.Sky.Flipper.Controllers
                 .Include(a => a.Enchantments));
             using (var context = new HypixelContext())
             {
-                return (await FlipperEngine.Instance.GetRelevantAuctionsCache(auction, dbContext,GlobalTracer.Instance.ActiveSpan)).Item1;
+                return (await FlipperEngine.Instance.GetRelevantAuctionsCache(auction, dbContext, new FindTracking())).Item1;
             }
         }
 
@@ -42,7 +42,7 @@ namespace Coflnet.Sky.Flipper.Controllers
         [Route("/status")]
         public IActionResult Status(string uuid)
         {
-            if(FlipperEngine.Instance.LastLiveProbe < DateTime.Now - TimeSpan.FromMinutes(2.5))
+            if (FlipperEngine.Instance.LastLiveProbe < DateTime.Now - TimeSpan.FromMinutes(2.5))
                 return StatusCode(500);
             return Ok();
         }
