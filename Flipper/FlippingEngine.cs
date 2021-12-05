@@ -73,8 +73,9 @@ namespace Coflnet.Sky.Flipper
                 RelevantEnchants.AddOrUpdate(item.Type, item.Level, (k, o) => item.Level);
                 Console.WriteLine(item.Type.ToString() + " " + item.Level);
             }
-
         }
+
+        private RestSharp.RestClient commandsClient = new RestSharp.RestClient("http://" + SimplerConfig.Config.Instance["skycommands_host"]);
 
 
         public Task ProcessPotentialFlipps()
@@ -253,11 +254,13 @@ namespace Coflnet.Sky.Flipper
                                 .FirstOrDefault();
             }
 
-            var recomendedBuyUnder = medianPrice * 0.9;
+            int additionalWorth = await GetGemstoneWorth(auction);
+            var recomendedBuyUnder = medianPrice * 0.9 + additionalWorth;
             if (recomendedBuyUnder < 1_000_000)
             {
                 recomendedBuyUnder *= 0.9;
             }
+
             if (price > recomendedBuyUnder) // at least 10% profit
             {
                 return null; // not a good flip
@@ -269,13 +272,19 @@ namespace Coflnet.Sky.Flipper
                 relevantAuctionIds.Clear();
             }
 
+            var additionalProps = new Dictionary<string, string>() { { "track", "fast" } };
+            if(additionalWorth > 0)
+            {
+                additionalProps["worth"] = additionalWorth.ToString();
+            }
+            
             var lowPrices = new LowPricedAuction()
             {
                 Auction = auction,
                 DailyVolume = (float)(relevantAuctions.Count / (DateTime.Now - oldest).TotalDays),
                 Finder = LowPricedAuction.FinderType.FLIPPER,
-                TargetPrice = (int)medianPrice * auction.Count,
-                AdditionalProps = new Dictionary<string, string>() { { "track", "fast" } }
+                TargetPrice = (int)medianPrice * auction.Count + additionalWorth,
+                AdditionalProps = additionalProps
             };
 
             lpp.Produce(LowPricedAuctionTopic, new Message<string, LowPricedAuction>()
@@ -316,7 +325,7 @@ namespace Coflnet.Sky.Flipper
 
             var flip = new FlipInstance()
             {
-                MedianPrice = (int)medianPrice * auction.Count,
+                MedianPrice = (int)medianPrice * auction.Count + additionalWorth,
                 Name = auction.ItemName,
                 Uuid = auction.Uuid,
                 LastKnownCost = (int)price * auction.Count,
@@ -327,7 +336,7 @@ namespace Coflnet.Sky.Flipper
                 Rarity = auction.Tier,
                 Interesting = PropertiesSelector.GetProperties(auction).OrderByDescending(a => a.Rating).Select(a => a.Value).ToList(),
                 SellerName = await name,
-                LowestBin = lowestBin?.FirstOrDefault()?.Price,
+                LowestBin = lowestBin?.FirstOrDefault()?.Price + additionalWorth,
                 SecondLowestBin = lowestBin?.Count >= 2 ? lowestBin[1].Price : 0L,
                 Auction = auction
             };
@@ -338,6 +347,32 @@ namespace Coflnet.Sky.Flipper
             return flip;
         }
 
+        private async Task<int> GetGemstoneWorth(SaveAuction auction)
+        {
+            var additionalWorth = 0;
+            var gems = auction.FlatenedNBT.Where(n => n.Value == "PERFECT" || n.Value == "FLAWLESS");
+            if (gems.Any())
+            {
+                var selects = gems.Select(async (g) =>
+                {
+                    var type = g.Key.Split("_").First();
+                    if(type == "COMBAT" || type == "DEFENSIVE" || type == "UNIVERSAL")
+                        type = auction.FlatenedNBT[g.Key + "_gem"];
+                    var route = $"/api/item/price/{g.Value}_{type}_GEM/current";
+                    var result = await commandsClient.ExecuteGetAsync(new RestSharp.RestRequest(route));
+                    var profit = JsonConvert.DeserializeObject<CurrentPrice>(result.Content).sell;
+                    if (g.Key == "PERFECT")
+                        return profit - 500_000;
+                    return profit - 100_000;
+                });
+                foreach (var item in selects)
+                {
+                    additionalWorth += Convert.ToInt32(await item);
+                }
+            }
+
+            return additionalWorth;
+        }
 
         private static HashSet<string> ignoredNbt = new HashSet<string>()
                 { "uid", "spawnedFor", "bossId", "exp", "uuid" };
@@ -668,7 +703,7 @@ namespace Coflnet.Sky.Flipper
                 var minLvl7 = GetMinLvl(highLvlEnchantList, 7);
 
                 select = select.Where(a => a.Enchantments
-                        .Where(e => 
+                        .Where(e =>
                                     (ultiType == Enchantment.EnchantmentType.unknown || ultiType == e.Type && ultiLevel == e.Level)
                                     &&
                                     (minLvl1.Contains(e.Type) && e.Level == 1
@@ -725,5 +760,10 @@ namespace Coflnet.Sky.Flipper
         6 Flumming potato books
         7 Hot Potato Books
         */
+    }
+
+    public class CurrentPrice
+    {
+        public double sell { get; set; }
     }
 }
