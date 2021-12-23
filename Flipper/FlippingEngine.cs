@@ -634,7 +634,7 @@ namespace Coflnet.Sky.Flipper
                 return select.Where(a => !a.NBTLookup.Where(n => n.KeyId == keyId).Any());
 
             if (!long.TryParse(flatNbt[keyValue], out long val))
-                val = NBT.GetValueId(keyId, flatNbt[keyValue]);
+                val = NBT.Instance.GetValueId(keyId, flatNbt[keyValue]);
             select = select.Where(a => a.NBTLookup.Where(n => n.KeyId == keyId && n.Value == val).Any());
             return select;
         }
