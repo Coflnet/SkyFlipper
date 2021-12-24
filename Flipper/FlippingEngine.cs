@@ -273,7 +273,7 @@ namespace Coflnet.Sky.Flipper
                 relevantAuctionIds.Clear();
             }
 
-            var additionalProps = new Dictionary<string, string>() { { "track", "fast" } };
+            var additionalProps = new Dictionary<string, string>(trackingContext.Context);
             if (additionalWorth > 0)
             {
                 additionalProps["worth"] = additionalWorth.ToString();
@@ -386,6 +386,8 @@ namespace Coflnet.Sky.Flipper
         public async Task<(List<SaveAuction>, DateTime)> GetRelevantAuctionsCache(SaveAuction auction, HypixelContext context, FindTracking tracking)
         {
             var key = $"n{auction.ItemId}{auction.ItemName}{auction.Tier}{auction.Bin}{auction.Count}";
+            if(relevantReforges.Contains(auction.Reforge))
+                key += auction.Reforge;
             var relevant = ExtractRelevantEnchants(auction);
             if (relevant.Count() == 0)
                 key += String.Concat(auction.Enchantments.Select(a => $"{a.Type}{a.Level}"));
@@ -412,7 +414,7 @@ namespace Coflnet.Sky.Flipper
             // shifted out of the critical path
             if (referenceAuctions.Item1.Count > 1)
             {
-                var saveTask = CacheService.Instance.SaveInRedis<(List<SaveAuction>, DateTime)>(key, referenceAuctions, TimeSpan.FromHours(1));
+                var saveTask = CacheService.Instance.SaveInRedis<(List<SaveAuction>, DateTime)>(key, referenceAuctions, TimeSpan.FromHours(2));
             }
             tracking.Tag("cache", "false");
             return referenceAuctions;
@@ -428,7 +430,7 @@ namespace Coflnet.Sky.Flipper
             var matchingCount = relevantEnchants.Count > 3 ? relevantEnchants.Count * 2 / 3 : relevantEnchants.Count;
             var ulti = relevantEnchants.Where(e => UltimateEnchants.ContainsKey(e.Type)).FirstOrDefault();
             var highLvlEnchantList = relevantEnchants.Where(e => !UltimateEnchants.ContainsKey(e.Type)).Select(a => a.Type).ToList();
-            var oldest = DateTime.Now - TimeSpan.FromHours(1);
+            var oldest = DateTime.Now - TimeSpan.FromHours(2);
 
             IQueryable<SaveAuction> select = GetSelect(auction, context, clearedName, itemId, youngest, matchingCount, ulti, relevantEnchants, oldest, auction.Reforge, 10);
 
