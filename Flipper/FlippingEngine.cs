@@ -249,8 +249,9 @@ namespace Coflnet.Sky.Flipper
             else
             {
                 medianPrice = relevantAuctions
-                                .OrderByDescending(a => a.HighestBidAmount)
+                                //.OrderByDescending(a => a.HighestBidAmount)
                                 .Select(a => a.HighestBidAmount / (a.Count == 0 ? 1 : a.Count))
+                                .OrderByDescending(a=>a)
                                 .Skip(relevantAuctions.Count / 2)
                                 .FirstOrDefault();
             }
