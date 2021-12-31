@@ -1,0 +1,309 @@
+[
+    {
+        "enchantments": [
+            {
+                "color": "§5",
+                "type": "protection",
+                "level": 6
+            },
+            {
+                "color": "§5",
+                "type": "growth",
+                "level": 6
+            },
+            {
+                "color": "§d",
+                "type": "ultimate_legion",
+                "level": 5
+            },
+            {
+                "color": "§9",
+                "type": "rejuvenate",
+                "level": 5
+            },
+            {
+                "color": "§9",
+                "type": "smarty_pants",
+                "level": 5
+            }
+        ],
+        "uuid": "42d2a600fa5049d5a3b76c6b8971f455",
+        "count": 1,
+        "startingBid": 62500000,
+        "tag": "SPEED_WITHER_LEGGINGS",
+        "itemName": "Ancient Maxor's Leggings ✪✪✪✪✪",
+        "start": "2021-12-26T19:50:38",
+        "end": "2021-12-28T19:50:38",
+        "auctioneerId": "471d882790d644b68d0a83dd7c96f99a",
+        "profileId": "91f61651976b463ea260d31c5e074dc9",
+        "coopMembers": null,
+        "highestBidAmount": 62500000,
+        "bids": [
+            {
+                "bidder": "a4084ea2762e4518a6c05956a2e91477",
+                "profileId": "unknown",
+                "amount": 62500000,
+                "timestamp": "2021-12-26T22:32:52"
+            }
+        ],
+        "anvilUses": 0,
+        "nbtData": {
+            "data": {
+                "rarity_upgrades": 1,
+                "hpc": 15,
+                "color": "93:47:185",
+                "gems": {
+                    "COMBAT_0": "FINE",
+                    "COMBAT_1_gem": "SAPPHIRE",
+                    "COMBAT_0_gem": "SAPPHIRE",
+                    "COMBAT_1": "FINE",
+                    "SAPPHIRE_0": "FLAWLESS"
+                },
+                "dungeon_item_level": 5,
+                "uid": "3ffd3e7d65e4"
+            }
+        },
+        "itemCreatedAt": "2021-09-07T02:05:00",
+        "reforge": "ancient",
+        "category": "ARMOR",
+        "tier": "MYTHIC",
+        "bin": true,
+        "flatNbt": {
+            "rarity_upgrades": "1",
+            "hpc": "15",
+            "color": "93:47:185",
+            "COMBAT_0": "FINE",
+            "COMBAT_1_gem": "SAPPHIRE",
+            "COMBAT_0_gem": "SAPPHIRE",
+            "COMBAT_1": "FINE",
+            "SAPPHIRE_0": "FLAWLESS",
+            "dungeon_item_level": "5",
+            "uid": "3ffd3e7d65e4"
+        }
+    },
+    {
+        "enchantments": [
+            {
+                "color": "§5",
+                "type": "protection",
+                "level": 6
+            },
+            {
+                "color": "§9",
+                "type": "growth",
+                "level": 5
+            },
+            {
+                "color": "§9",
+                "type": "rejuvenate",
+                "level": 5
+            },
+            {
+                "color": "§d",
+                "type": "ultimate_legion",
+                "level": 5
+            },
+            {
+                "color": "§9",
+                "type": "thorns",
+                "level": 3
+            }
+        ],
+        "uuid": "d54c02b525c945a3bc62d40789605940",
+        "count": 1,
+        "startingBid": 44444444,
+        "tag": "SPEED_WITHER_LEGGINGS",
+        "itemName": "Ancient Maxor's Leggings ✪✪✪✪✪",
+        "start": "2021-12-24T06:20:25",
+        "end": "2021-12-24T08:35:36",
+        "auctioneerId": "9befae6a86994372b1c563eece66f534",
+        "profileId": "ff204f42a8994ad29bad2d55af6d6d9d",
+        "coopMembers": null,
+        "highestBidAmount": 44444444,
+        "bids": [
+            {
+                "bidder": "e9de16a0939b4192b9713296946c1284",
+                "profileId": "unknown",
+                "amount": 44444444,
+                "timestamp": "2021-12-24T08:33:53"
+            }
+        ],
+        "anvilUses": 0,
+        "nbtData": {
+            "data": {
+                "rarity_upgrades": 1,
+                "hpc": 15,
+                "color": "93:47:185",
+                "gems": {
+                    "COMBAT_0": "FINE",
+                    "COMBAT_1_gem": "JASPER",
+                    "COMBAT_0_gem": "JASPER",
+                    "COMBAT_1": "FINE"
+                },
+                "dungeon_item_level": 5,
+                "uid": "91728343c2b3"
+            }
+        },
+        "itemCreatedAt": "2021-05-19T07:57:00",
+        "reforge": "ancient",
+        "category": "ARMOR",
+        "tier": "MYTHIC",
+        "bin": true,
+        "flatNbt": {
+            "rarity_upgrades": "1",
+            "hpc": "15",
+            "color": "93:47:185",
+            "COMBAT_0": "FINE",
+            "COMBAT_1_gem": "JASPER",
+            "COMBAT_0_gem": "JASPER",
+            "COMBAT_1": "FINE",
+            "dungeon_item_level": "5",
+            "uid": "91728343c2b3"
+        }
+    },
+    {
+        "enchantments": [
+            {
+                "color": "§d",
+                "type": "ultimate_wisdom",
+                "level": 5
+            },
+            {
+                "color": "§9",
+                "type": "smarty_pants",
+                "level": 5
+            },
+            {
+                "color": "§9",
+                "type": "rejuvenate",
+                "level": 5
+            },
+            {
+                "color": "§5",
+                "type": "growth",
+                "level": 6
+            },
+            {
+                "color": "§5",
+                "type": "protection",
+                "level": 6
+            }
+        ],
+        "uuid": "9f4127f95ad441228ba2b829f2ff4c03",
+        "count": 1,
+        "startingBid": 40000000,
+        "tag": "SPEED_WITHER_LEGGINGS",
+        "itemName": "Ancient Maxor's Leggings ✪✪✪✪✪",
+        "start": "2021-12-24T19:49:04",
+        "end": "2021-12-25T07:25:37",
+        "auctioneerId": "1e9aa83284ea4dc281c11e9a67802842",
+        "profileId": "197648c51f714926bb96200b0efcb5af",
+        "coopMembers": null,
+        "highestBidAmount": 40000000,
+        "bids": [
+            {
+                "bidder": "2e7145a885074d4f835b3f48a5bddcda",
+                "profileId": "unknown",
+                "amount": 40000000,
+                "timestamp": "2021-12-25T07:24:19"
+            }
+        ],
+        "anvilUses": 0,
+        "nbtData": {
+            "data": {
+                "rarity_upgrades": 1,
+                "hpc": 15,
+                "color": "93:47:185",
+                "gems": {
+                    "COMBAT_0": "FINE",
+                    "COMBAT_1_gem": "JASPER",
+                    "COMBAT_0_gem": "JASPER",
+                    "COMBAT_1": "FINE"
+                },
+                "dungeon_item_level": 5,
+                "uid": "e24a364879a2"
+            }
+        },
+        "itemCreatedAt": "2021-03-26T10:49:00",
+        "reforge": "ancient",
+        "category": "ARMOR",
+        "tier": "MYTHIC",
+        "bin": true,
+        "flatNbt": {
+            "rarity_upgrades": "1",
+            "hpc": "15",
+            "color": "93:47:185",
+            "COMBAT_0": "FINE",
+            "COMBAT_1_gem": "JASPER",
+            "COMBAT_0_gem": "JASPER",
+            "COMBAT_1": "FINE",
+            "dungeon_item_level": "5",
+            "uid": "e24a364879a2"
+        }
+    },
+    {
+        "enchantments": [
+            {
+                "color": "§9",
+                "type": "thorns",
+                "level": 3
+            },
+            {
+                "color": "§9",
+                "type": "rejuvenate",
+                "level": 5
+            },
+            {
+                "color": "§5",
+                "type": "protection",
+                "level": 6
+            },
+            {
+                "color": "§9",
+                "type": "growth",
+                "level": 5
+            }
+        ],
+        "uuid": "fc92b460920d486494732beeed57ed77",
+        "count": 1,
+        "startingBid": 25890000,
+        "tag": "SPEED_WITHER_LEGGINGS",
+        "itemName": "Ancient Maxor's Leggings ✪✪✪✪✪",
+        "start": "2021-12-29T16:09:01",
+        "end": "2021-12-29T19:49:49",
+        "auctioneerId": "a50daa10865b42a4820bfb2a97e7c238",
+        "profileId": null,
+        "coopMembers": null,
+        "highestBidAmount": 25890000,
+        "bids": [
+            {
+                "bidder": "094bee5d16b343fa85ad93516d104c3a",
+                "profileId": "unknown",
+                "amount": 25890000,
+                "timestamp": "2021-12-29T19:47:50"
+            }
+        ],
+        "anvilUses": 0,
+        "nbtData": {
+            "data": {
+                "rarity_upgrades": 1,
+                "hpc": 10,
+                "color": "93:47:185",
+                "dungeon_item_level": 5,
+                "uid": "fe726d267280"
+            }
+        },
+        "itemCreatedAt": "2021-12-17T20:13:00",
+        "reforge": "ancient",
+        "category": "ARMOR",
+        "tier": "MYTHIC",
+        "bin": true,
+        "flatNbt": {
+            "rarity_upgrades": "1",
+            "hpc": "10",
+            "color": "93:47:185",
+            "dungeon_item_level": "5",
+            "uid": "fe726d267280"
+        }
+    }
+]

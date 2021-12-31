@@ -71,7 +71,6 @@ namespace Coflnet.Sky.Flipper
             foreach (var item in Coflnet.Sky.Constants.RelevantEnchants)
             {
                 RelevantEnchants.AddOrUpdate(item.Type, item.Level, (k, o) => item.Level);
-                Console.WriteLine(item.Type.ToString() + " " + item.Level);
             }
         }
 
@@ -686,7 +685,7 @@ namespace Coflnet.Sky.Flipper
             return select;
         }
 
-        private static IQueryable<SaveAuction> AddEnchantmentSubselect(SaveAuction auction, List<Enchantment> highLvlEnchantList, IQueryable<SaveAuction> select, byte ultiLevel, Enchantment.EnchantmentType ultiType, FindTracking track, bool reduced = false)
+        public static IQueryable<SaveAuction> AddEnchantmentSubselect(SaveAuction auction, List<Enchantment> highLvlEnchantList, IQueryable<SaveAuction> select, byte ultiLevel, Enchantment.EnchantmentType ultiType, FindTracking track, bool reduced = false)
         {
             var relevant = RelevantEnchants.Select(r => r.Key).ToList();
             if (highLvlEnchantList.Count > 0)
@@ -728,7 +727,8 @@ namespace Coflnet.Sky.Flipper
                                         || minLvl9.Contains(e.Type) && e.Level == 9
                                         || minLvl10.Contains(e.Type) && e.Level == 10)
                                         && !missingTypes.Contains(e.Type)
-                                    ).Count() == matchingCount);
+                                    ).Count() == matchingCount 
+                                    && !a.Enchantments.Where(e => missingTypes.Contains(e.Type)).Any());
             }
             else if (auction.Enchantments?.Count == 1 && auction.Tag == "ENCHANTED_BOOK")
                 select = select.Where(a => a.Enchantments != null && a.Enchantments.Count() == 1
