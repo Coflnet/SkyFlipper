@@ -249,7 +249,7 @@ namespace Coflnet.Sky.Flipper
             {
                 medianPrice = relevantAuctions
                                 //.OrderByDescending(a => a.HighestBidAmount)
-                                .Select(a => a.HighestBidAmount / (a.Count == 0 ? 1 : a.Count))
+                                .Select(a => a.HighestBidAmount / (a.Count == 0 ? 1 : a.Count) / (a.Count == auction.Count ? 1 : 2))
                                 .OrderByDescending(a => a)
                                 .Skip(relevantAuctions.Count / 2)
                                 .FirstOrDefault();
@@ -262,7 +262,7 @@ namespace Coflnet.Sky.Flipper
                 recomendedBuyUnder *= 0.9;
             }
 
-            if (price > recomendedBuyUnder) // at least 10% profit
+            if (price > recomendedBuyUnder || recomendedBuyUnder < 100_000) // at least 10% profit
             {
                 return null; // not a good flip
             }
@@ -515,6 +515,8 @@ namespace Coflnet.Sky.Flipper
             else
                 select = select.Where(a => !relevantReforges.Contains(a.Reforge));
 
+            if (auction.Count > 1 && !reduced) // try to match exact count
+                select = select.Where(s => s.Count == auction.Count);
 
             if (auction.ItemName != clearedName && clearedName != null)
                 select = select.Where(a => EF.Functions.Like(a.ItemName, "%" + clearedName));
@@ -727,7 +729,7 @@ namespace Coflnet.Sky.Flipper
                                         || minLvl9.Contains(e.Type) && e.Level == 9
                                         || minLvl10.Contains(e.Type) && e.Level == 10)
                                         && !missingTypes.Contains(e.Type)
-                                    ).Count() == matchingCount 
+                                    ).Count() == matchingCount
                                     && !a.Enchantments.Where(e => missingTypes.Contains(e.Type)).Any());
             }
             else if (auction.Enchantments?.Count == 1 && auction.Tag == "ENCHANTED_BOOK")
