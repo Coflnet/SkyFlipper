@@ -554,6 +554,8 @@ namespace Coflnet.Sky.Flipper
             if (auction.Tag.Contains("HOE") || flatNbt.ContainsKey("farming_for_dummies_count"))
                 select = AddNBTSelect(select, flatNbt, "farming_for_dummies_count");
 
+            if(auction.Tag == "CAKE_SOUL")
+                select = AddNBTSelect(select, flatNbt, "captured_player");
 
             if (flatNbt.ContainsKey("rarity_upgrades"))
                 select = AddNBTSelect(select, flatNbt, "rarity_upgrades");
