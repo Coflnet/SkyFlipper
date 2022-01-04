@@ -181,7 +181,7 @@ namespace Coflnet.Sky.Flipper
         {
             receiveTime.Observe((DateTime.Now - cr.Message.Value.FindTime).TotalSeconds);
 
-
+            var startTime = DateTime.Now;
             FlipInstance flip = null;
             using (var scope = serviceFactory.CreateScope())
             using (var context = scope.ServiceProvider.GetRequiredService<HypixelContext>())
@@ -191,6 +191,11 @@ namespace Coflnet.Sky.Flipper
             if (flip != null)
             {
                 var timetofind = (DateTime.Now - flip.Auction.FindTime).TotalSeconds;
+                if (flip.Auction.Context != null)
+                {
+                    flip.Auction.Context["frec"] = startTime.ToString();
+                    flip.Auction.Context["fsend"] = DateTime.Now.ToString();
+                }
                 p.Produce(ProduceTopic, new Message<string, FlipInstance> { Value = flip, Key = flip.UId.ToString() }, report =>
                 {
                     if (report.TopicPartitionOffset.Offset % 200 == 0)
@@ -554,7 +559,7 @@ namespace Coflnet.Sky.Flipper
             if (auction.Tag.Contains("HOE") || flatNbt.ContainsKey("farming_for_dummies_count"))
                 select = AddNBTSelect(select, flatNbt, "farming_for_dummies_count");
 
-            if(auction.Tag == "CAKE_SOUL")
+            if (auction.Tag == "CAKE_SOUL")
                 select = AddNBTSelect(select, flatNbt, "captured_player");
 
             if (flatNbt.ContainsKey("rarity_upgrades"))
