@@ -193,8 +193,8 @@ namespace Coflnet.Sky.Flipper
                 var timetofind = (DateTime.Now - flip.Auction.FindTime).TotalSeconds;
                 if (flip.Auction.Context != null)
                 {
-                    flip.Auction.Context["frec"] = startTime.ToString();
-                    flip.Auction.Context["fsend"] = DateTime.Now.ToString();
+                    flip.Auction.Context["frec"] = (startTime - flip.Auction.FindTime).ToString();
+                    flip.Auction.Context["fsend"] = (DateTime.Now - flip.Auction.FindTime).ToString();
                 }
                 p.Produce(ProduceTopic, new Message<string, FlipInstance> { Value = flip, Key = flip.UId.ToString() }, report =>
                 {
