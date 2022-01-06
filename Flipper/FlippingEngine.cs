@@ -195,9 +195,8 @@ namespace Coflnet.Sky.Flipper
             {
                 var timetofind = (DateTime.Now - flip.Auction.FindTime).TotalSeconds;
                 if (flip.Auction.Context != null)
-                {
                     flip.Auction.Context["fsend"] = (DateTime.Now - flip.Auction.FindTime).ToString();
-                }
+                
                 p.Produce(ProduceTopic, new Message<string, FlipInstance> { Value = flip, Key = flip.UId.ToString() }, report =>
                 {
                     if (report.TopicPartitionOffset.Offset % 200 == 0)
@@ -285,6 +284,7 @@ namespace Coflnet.Sky.Flipper
             {
                 additionalProps["worth"] = additionalWorth.ToString();
             }
+            additionalProps["fsend"] = (DateTime.Now - auction.FindTime).ToString();
 
             var lowPrices = new LowPricedAuction()
             {
