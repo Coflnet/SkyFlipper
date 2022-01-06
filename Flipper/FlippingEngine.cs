@@ -126,6 +126,9 @@ namespace Coflnet.Sky.Flipper
 
                                 var receiveSpan = tracer.BuildSpan("ReceiveAuction")
                                         .AsChildOf(parent).Start();
+                                if (cr.Message.Value.Context != null)
+                                    cr.Message.Value.Context["frec"] = (DateTime.Now - cr.Message.Value.FindTime).ToString();
+                                
                                 var findingTask = taskFactory.StartNew(async () =>
                                 {
                                     receiveSpan.Finish();
@@ -193,7 +196,6 @@ namespace Coflnet.Sky.Flipper
                 var timetofind = (DateTime.Now - flip.Auction.FindTime).TotalSeconds;
                 if (flip.Auction.Context != null)
                 {
-                    flip.Auction.Context["frec"] = (startTime - flip.Auction.FindTime).ToString();
                     flip.Auction.Context["fsend"] = (DateTime.Now - flip.Auction.FindTime).ToString();
                 }
                 p.Produce(ProduceTopic, new Message<string, FlipInstance> { Value = flip, Key = flip.UId.ToString() }, report =>
