@@ -578,6 +578,8 @@ namespace Coflnet.Sky.Flipper
                 select = AddNBTSelect(select, flatNbt, "dungeon_item_level");
             if (flatNbt.ContainsKey("candyUsed"))
                 select = AddCandySelect(select, flatNbt, "candyUsed");
+            if (flatNbt.ContainsKey("art_of_war_count"))
+                select = AddNBTSelect(select, flatNbt, "art_of_war_count");
 
 
 
