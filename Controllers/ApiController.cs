@@ -34,7 +34,7 @@ namespace Coflnet.Sky.Flipper.Controllers
                 .Include(a => a.Enchantments));
             using (var context = new HypixelContext())
             {
-                return (await FlipperEngine.Instance.GetRelevantAuctionsCache(auction, dbContext, new FindTracking())).Item1;
+                return (await FlipperEngine.Instance.GetRelevantAuctionsCache(auction, dbContext, new FindTracking())).references;
             }
         }
 

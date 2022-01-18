@@ -237,7 +237,8 @@ namespace Coflnet.Sky.Flipper
                 auction.NBTLookup = NBT.CreateLookup(auction);
 
             var trackingContext = new FindTracking() { Span = span.Span };
-            var (relevantAuctions, oldest) = await GetRelevantAuctionsCache(auction, context, trackingContext);
+            var referenceElement = await GetRelevantAuctionsCache(auction, context, trackingContext);
+            var relevantAuctions = referenceElement.references;
 
             long medianPrice = 0;
             if (relevantAuctions.Count < 2)
@@ -260,9 +261,11 @@ namespace Coflnet.Sky.Flipper
                                 .Skip(relevantAuctions.Count / 2)
                                 .FirstOrDefault();
             }
-
+            var reductionDueToCount = Math.Pow(1.01, referenceElement.HitCount);
             int additionalWorth = await GetGemstoneWorth(auction);
-            var recomendedBuyUnder = medianPrice * 0.9 + additionalWorth;
+            var recomendedBuyUnder = (medianPrice * 0.9 + additionalWorth) / reductionDueToCount;
+            if (referenceElement.HitCount > 1)
+                Console.WriteLine($"reduced {medianPrice * 0.9 + additionalWorth} to {recomendedBuyUnder} - {referenceElement.HitCount}");
             if (recomendedBuyUnder < 1_000_000)
             {
                 recomendedBuyUnder *= 0.9;
@@ -290,7 +293,7 @@ namespace Coflnet.Sky.Flipper
             var lowPrices = new LowPricedAuction()
             {
                 Auction = auction,
-                DailyVolume = (float)(relevantAuctions.Count / (DateTime.Now - oldest).TotalDays),
+                DailyVolume = (float)(relevantAuctions.Count / (DateTime.Now - referenceElement.Oldest).TotalDays),
                 Finder = LowPricedAuction.FinderType.FLIPPER,
                 TargetPrice = (int)medianPrice * auction.Count + additionalWorth,
                 AdditionalProps = additionalProps
@@ -338,7 +341,7 @@ namespace Coflnet.Sky.Flipper
                 Name = auction.ItemName,
                 Uuid = auction.Uuid,
                 LastKnownCost = (int)price * auction.Count,
-                Volume = (float)(relevantAuctions.Count / (DateTime.Now - oldest).TotalDays),
+                Volume = (float)(relevantAuctions.Count / (DateTime.Now - referenceElement.Oldest).TotalDays),
                 Tag = auction.Tag,
                 Bin = auction.Bin,
                 UId = auction.UId,
@@ -391,9 +394,9 @@ namespace Coflnet.Sky.Flipper
         /// <param name="auction"></param>
         /// <param name="context"></param>
         /// <returns></returns>
-        public async Task<(List<SaveAuction>, DateTime)> GetRelevantAuctionsCache(SaveAuction auction, HypixelContext context, FindTracking tracking)
+        public async Task<RelevantElement> GetRelevantAuctionsCache(SaveAuction auction, HypixelContext context, FindTracking tracking)
         {
-            var key = $"f{auction.ItemId}{auction.ItemName}{auction.Tier}{auction.Bin}{auction.Count}";
+            var key = $"o{auction.ItemId}{auction.ItemName}{auction.Tier}{auction.Bin}{auction.Count}";
             if (relevantReforges.Contains(auction.Reforge))
                 key += auction.Reforge;
             var relevant = ExtractRelevantEnchants(auction);
@@ -405,10 +408,15 @@ namespace Coflnet.Sky.Flipper
             tracking.Tag("key", key);
             try
             {
-                var fromCache = await CacheService.Instance.GetFromRedis<(List<SaveAuction>, DateTime)>(key);
-                if (fromCache != default((List<SaveAuction>, DateTime)))
+                var fromCache = await CacheService.Instance.GetFromRedis<RelevantElement>(key);
+                if (fromCache != default(RelevantElement))
                 {
-                    //Console.WriteLine("flip cache hit");
+                    // is set to fireand forget (will return imediately)
+                    var time = DateTime.Now - fromCache.QueryTime + TimeSpan.FromHours(2);
+                    if (time < TimeSpan.Zero)
+                        time = TimeSpan.FromSeconds(1);
+                    fromCache.HitCount++;
+                    await CacheService.Instance.SaveInRedis(key, fromCache, time);
                     tracking.Tag("cache", "true");
                     return fromCache;
                 }
@@ -420,15 +428,15 @@ namespace Coflnet.Sky.Flipper
 
             var referenceAuctions = await GetRelevantAuctions(auction, context, tracking);
             // shifted out of the critical path
-            if (referenceAuctions.Item1.Count > 1)
+            if (referenceAuctions.references.Count > 1)
             {
-                var saveTask = CacheService.Instance.SaveInRedis<(List<SaveAuction>, DateTime)>(key, referenceAuctions, TimeSpan.FromHours(2));
+                await CacheService.Instance.SaveInRedis<RelevantElement>(key, referenceAuctions, TimeSpan.FromHours(2));
             }
             tracking.Tag("cache", "false");
             return referenceAuctions;
         }
 
-        private async Task<(List<SaveAuction>, DateTime)> GetRelevantAuctions(SaveAuction auction, HypixelContext context, FindTracking tracking)
+        private async Task<RelevantElement> GetRelevantAuctions(SaveAuction auction, HypixelContext context, FindTracking tracking)
         {
             var itemData = auction.NbtData.Data;
             var clearedName = auction.Reforge != ItemReferences.Reforge.None ? ItemReferences.RemoveReforge(auction.ItemName) : auction.ItemName;
@@ -480,7 +488,11 @@ namespace Coflnet.Sky.Flipper
                 relevantAuctions = relevantAuctions.GroupBy(a => a.SellerId).Select(a => a.First()).ToList();
 
 
-            return (relevantAuctions, oldest);
+            return new RelevantElement()
+            {
+                references = relevantAuctions,
+                Oldest = oldest
+            };
         }
 
         public static List<Enchantment> ExtractRelevantEnchants(SaveAuction auction)
@@ -801,5 +813,18 @@ namespace Coflnet.Sky.Flipper
             Span?.SetTag(key, value);
             Context[key] = value;
         }
+    }
+
+    [MessagePackObject]
+    public class RelevantElement
+    {
+        [Key(0)]
+        public List<SaveAuction> references;
+        [Key(1)]
+        public DateTime Oldest;
+        [Key(2)]
+        public int HitCount;
+        [Key(3)]
+        public DateTime QueryTime = DateTime.Now;
     }
 }
