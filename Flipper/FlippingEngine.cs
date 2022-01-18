@@ -304,7 +304,7 @@ namespace Coflnet.Sky.Flipper
                 Key = auction.Uuid,
                 Value = lowPrices
             });
-
+            await SaveHitOnFlip(referenceElement);
 
             var itemTag = auction.Tag;
             var name = PlayerSearch.Instance.GetNameWithCacheAsync(auction.AuctioneerId);
@@ -356,7 +356,20 @@ namespace Coflnet.Sky.Flipper
             foundFlipCount.Inc();
 
             time.Observe((DateTime.Now - auction.FindTime).TotalSeconds);
+
             return flip;
+        }
+
+        private static async Task SaveHitOnFlip(RelevantElement referenceElement)
+        {
+
+
+            // is set to fireand forget (will return imediately)
+            var storeTime = DateTime.Now - referenceElement.QueryTime + TimeSpan.FromHours(2);
+            if (storeTime < TimeSpan.Zero)
+                storeTime = TimeSpan.FromSeconds(1);
+            referenceElement.HitCount++;
+            await CacheService.Instance.SaveInRedis(referenceElement.Key, referenceElement, storeTime);
         }
 
         private async Task<int> GetGemstoneWorth(SaveAuction auction)
@@ -411,12 +424,7 @@ namespace Coflnet.Sky.Flipper
                 var fromCache = await CacheService.Instance.GetFromRedis<RelevantElement>(key);
                 if (fromCache != default(RelevantElement))
                 {
-                    // is set to fireand forget (will return imediately)
-                    var time = DateTime.Now - fromCache.QueryTime + TimeSpan.FromHours(2);
-                    if (time < TimeSpan.Zero)
-                        time = TimeSpan.FromSeconds(1);
-                    fromCache.HitCount++;
-                    await CacheService.Instance.SaveInRedis(key, fromCache, time);
+                    fromCache.Key = key;
                     tracking.Tag("cache", "true");
                     return fromCache;
                 }
@@ -826,5 +834,7 @@ namespace Coflnet.Sky.Flipper
         public int HitCount;
         [Key(3)]
         public DateTime QueryTime = DateTime.Now;
+        [IgnoreMember]
+        public string Key;
     }
 }
