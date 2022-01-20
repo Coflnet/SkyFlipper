@@ -264,8 +264,6 @@ namespace Coflnet.Sky.Flipper
             var reductionDueToCount = Math.Pow(1.01, referenceElement.HitCount);
             int additionalWorth = await GetGemstoneWorth(auction);
             var recomendedBuyUnder = (medianPrice * 0.9 + additionalWorth) / reductionDueToCount;
-            if (referenceElement.HitCount > 1)
-                Console.WriteLine($"reduced {medianPrice * 0.9 + additionalWorth} to {recomendedBuyUnder} - {referenceElement.HitCount}");
             if (recomendedBuyUnder < 1_000_000)
             {
                 recomendedBuyUnder *= 0.9;
@@ -304,7 +302,7 @@ namespace Coflnet.Sky.Flipper
                 Key = auction.Uuid,
                 Value = lowPrices
             });
-            await SaveHitOnFlip(referenceElement);
+            await SaveHitOnFlip(referenceElement, auction);
 
             var itemTag = auction.Tag;
             var name = PlayerSearch.Instance.GetNameWithCacheAsync(auction.AuctioneerId);
@@ -360,16 +358,40 @@ namespace Coflnet.Sky.Flipper
             return flip;
         }
 
-        private static async Task SaveHitOnFlip(RelevantElement referenceElement)
+        private async Task SaveHitOnFlip(RelevantElement referenceElement, SaveAuction auction)
         {
 
+            if (referenceElement.HitCount % 5 == 1)
+                Console.WriteLine($"hit {referenceElement.Key} {referenceElement.HitCount} times");
 
-            // is set to fireand forget (will return imediately)
             var storeTime = DateTime.Now - referenceElement.QueryTime + TimeSpan.FromHours(2);
             if (storeTime < TimeSpan.Zero)
                 storeTime = TimeSpan.FromSeconds(1);
             referenceElement.HitCount++;
-            await CacheService.Instance.SaveInRedis(referenceElement.Key, referenceElement, storeTime);
+            if (storeTime < TimeSpan.FromHours(1) && referenceElement.HitCount > 1)
+            {
+                _ = Task.Run(async () =>
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(10));
+                    try
+                    {
+                        using (var scope = serviceFactory.CreateScope())
+                        using (var context = scope.ServiceProvider.GetRequiredService<HypixelContext>())
+                        {
+                            await GetAndCacheReferenceAuctions(auction, context, new FindTracking(), referenceElement.Key);
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        dev.Logger.Instance.Error(e, "refreshing cache for " + referenceElement?.Key);
+                    }
+                }).ConfigureAwait(false);
+
+
+            }
+            else
+                // is set to fireand forget (will return imediately)
+                await CacheService.Instance.SaveInRedis(referenceElement.Key, referenceElement, storeTime);
         }
 
         private async Task<int> GetGemstoneWorth(SaveAuction auction)
@@ -434,6 +456,11 @@ namespace Coflnet.Sky.Flipper
                 dev.Logger.Instance.Error(e, "cache flip");
             }
 
+            return await GetAndCacheReferenceAuctions(auction, context, tracking, key);
+        }
+
+        private async Task<RelevantElement> GetAndCacheReferenceAuctions(SaveAuction auction, HypixelContext context, FindTracking tracking, string key)
+        {
             var referenceAuctions = await GetRelevantAuctions(auction, context, tracking);
             // shifted out of the critical path
             if (referenceAuctions.references.Count > 1)
@@ -441,6 +468,7 @@ namespace Coflnet.Sky.Flipper
                 await CacheService.Instance.SaveInRedis<RelevantElement>(key, referenceAuctions, TimeSpan.FromHours(2));
             }
             tracking.Tag("cache", "false");
+            referenceAuctions.Key = key;
             return referenceAuctions;
         }
 
