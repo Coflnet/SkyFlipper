@@ -186,11 +186,9 @@ namespace Coflnet.Sky.Flipper
 
             var startTime = DateTime.Now;
             FlipInstance flip = null;
-            using (var scope = serviceFactory.CreateScope())
-            using (var context = scope.ServiceProvider.GetRequiredService<HypixelContext>())
-            {
-                flip = await NewAuction(cr.Message.Value, context, lpp, span);
-            }
+
+            flip = await NewAuction(cr.Message.Value, lpp, span);
+
             if (flip != null)
             {
                 var timetofind = (DateTime.Now - flip.Auction.FindTime).TotalSeconds;
@@ -218,7 +216,7 @@ namespace Coflnet.Sky.Flipper
 
         public ConcurrentDictionary<long, List<long>> relevantAuctionIds = new ConcurrentDictionary<long, List<long>>();
 
-        public async System.Threading.Tasks.Task<FlipInstance> NewAuction(SaveAuction auction, HypixelContext context, IProducer<string, LowPricedAuction> lpp, OpenTracing.IScope span)
+        public async System.Threading.Tasks.Task<FlipInstance> NewAuction(SaveAuction auction, IProducer<string, LowPricedAuction> lpp, OpenTracing.IScope span)
         {
             // blacklist
             if (auction.ItemName == "null")
@@ -237,7 +235,7 @@ namespace Coflnet.Sky.Flipper
                 auction.NBTLookup = NBT.CreateLookup(auction);
 
             var trackingContext = new FindTracking() { Span = span.Span };
-            var referenceElement = await GetRelevantAuctionsCache(auction, context, trackingContext);
+            var referenceElement = await GetRelevantAuctionsCache(auction, trackingContext);
             var relevantAuctions = referenceElement.references;
 
             long medianPrice = 0;
@@ -254,9 +252,9 @@ namespace Coflnet.Sky.Flipper
             }
             else
             {
-                medianPrice = relevantAuctions
+                medianPrice = (await Task.WhenAll(relevantAuctions
                                 //.OrderByDescending(a => a.HighestBidAmount)
-                                .Select(a => a.HighestBidAmount / (a.Count == 0 ? 1 : a.Count) / (a.Count == auction.Count ? 1 : 2))
+                                .Select(async a => a.HighestBidAmount / (a.Count == 0 ? 1 : a.Count) / (a.Count == auction.Count ? 1 : 2) - await GetGemstoneWorth(a))))
                                 .OrderByDescending(a => a)
                                 .Skip(relevantAuctions.Count / 2)
                                 .FirstOrDefault();
@@ -273,6 +271,9 @@ namespace Coflnet.Sky.Flipper
             {
                 return null; // not a good flip
             }
+
+            // recheck with gemstone value removed (value doesn't have to be checked for all items)
+
 
             relevantAuctionIds[auction.UId] = relevantAuctions.Select(a => a.UId == 0 ? AuctionService.Instance.GetId(a.Uuid) : a.UId).ToList();
             if (relevantAuctionIds.Count > 10000)
@@ -375,11 +376,7 @@ namespace Coflnet.Sky.Flipper
                     await Task.Delay(TimeSpan.FromSeconds(10));
                     try
                     {
-                        using (var scope = serviceFactory.CreateScope())
-                        using (var context = scope.ServiceProvider.GetRequiredService<HypixelContext>())
-                        {
-                            await GetAndCacheReferenceAuctions(auction, context, new FindTracking(), referenceElement.Key);
-                        }
+                        await GetAndCacheReferenceAuctions(auction,new FindTracking(), referenceElement.Key);
                     }
                     catch (Exception e)
                     {
@@ -429,7 +426,7 @@ namespace Coflnet.Sky.Flipper
         /// <param name="auction"></param>
         /// <param name="context"></param>
         /// <returns></returns>
-        public async Task<RelevantElement> GetRelevantAuctionsCache(SaveAuction auction, HypixelContext context, FindTracking tracking)
+        public async Task<RelevantElement> GetRelevantAuctionsCache(SaveAuction auction, FindTracking tracking)
         {
             var key = $"o{auction.ItemId}{auction.ItemName}{auction.Tier}{auction.Bin}{auction.Count}";
             if (relevantReforges.Contains(auction.Reforge))
@@ -456,11 +453,14 @@ namespace Coflnet.Sky.Flipper
                 dev.Logger.Instance.Error(e, "cache flip");
             }
 
-            return await GetAndCacheReferenceAuctions(auction, context, tracking, key);
+            return await GetAndCacheReferenceAuctions(auction, tracking, key);
         }
 
-        private async Task<RelevantElement> GetAndCacheReferenceAuctions(SaveAuction auction, HypixelContext context, FindTracking tracking, string key)
+        private async Task<RelevantElement> GetAndCacheReferenceAuctions(SaveAuction auction, FindTracking tracking, string key)
         {
+            using var scope = serviceFactory.CreateScope();
+            using var context = scope.ServiceProvider.GetRequiredService<HypixelContext>();
+
             var referenceAuctions = await GetRelevantAuctions(auction, context, tracking);
             // shifted out of the critical path
             if (referenceAuctions.references.Count > 1)
@@ -687,7 +687,7 @@ namespace Coflnet.Sky.Flipper
             return select
                 .Where(a => a.End > oldest && a.End < youngest)
                 //.OrderByDescending(a=>a.Id)
-                //.Include(a => a.NbtData)
+                .Include(a => a.NbtData)
                 .Take(limit);
         }
 
