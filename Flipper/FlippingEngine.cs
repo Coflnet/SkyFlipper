@@ -74,6 +74,12 @@ namespace Coflnet.Sky.Flipper
             }
         }
 
+        public FlipperEngine()
+        {
+            // results are not relevant if older than 5 seconds
+            commandsClient.Timeout = 5000;
+        }
+
         private RestSharp.RestClient commandsClient = new RestSharp.RestClient("http://" + SimplerConfig.Config.Instance["skycommands_host"]);
 
 
@@ -376,7 +382,7 @@ namespace Coflnet.Sky.Flipper
                     await Task.Delay(TimeSpan.FromSeconds(10));
                     try
                     {
-                        await GetAndCacheReferenceAuctions(auction,new FindTracking(), referenceElement.Key);
+                        await GetAndCacheReferenceAuctions(auction, new FindTracking(), referenceElement.Key);
                     }
                     catch (Exception e)
                     {
@@ -399,15 +405,23 @@ namespace Coflnet.Sky.Flipper
             {
                 var selects = gems.Select(async (g) =>
                 {
-                    var type = g.Key.Split("_").First();
-                    if (type == "COMBAT" || type == "DEFENSIVE" || type == "UNIVERSAL")
-                        type = auction.FlatenedNBT[g.Key + "_gem"];
-                    var route = $"/api/item/price/{g.Value}_{type}_GEM/current";
-                    var result = await commandsClient.ExecuteGetAsync(new RestSharp.RestRequest(route));
-                    var profit = JsonConvert.DeserializeObject<CurrentPrice>(result.Content).sell;
-                    if (g.Key == "PERFECT")
-                        return profit - 500_000;
-                    return profit - 100_000;
+                    try
+                    {
+                        var type = g.Key.Split("_").First();
+                        if (type == "COMBAT" || type == "DEFENSIVE" || type == "UNIVERSAL")
+                            type = auction.FlatenedNBT[g.Key + "_gem"];
+                        var route = $"/api/item/price/{g.Value}_{type}_GEM/current";
+                        var result = await commandsClient.ExecuteGetAsync(new RestSharp.RestRequest(route));
+                        var profit = JsonConvert.DeserializeObject<CurrentPrice>(result.Content).sell;
+                        if (g.Key == "PERFECT")
+                            return profit - 500_000;
+                        return profit - 100_000;
+                    }
+                    catch(Exception e)
+                    {
+                        dev.Logger.Instance.Error(e,"retrieving gem price");
+                        return 0;
+                    }
                 });
                 foreach (var item in selects)
                 {
