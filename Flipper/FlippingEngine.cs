@@ -247,7 +247,7 @@ namespace Coflnet.Sky.Flipper
             long medianPrice = 0;
             if (relevantAuctions.Count < 2)
             {
-                Console.WriteLine($"Could not find enough relevant auctions for {auction.ItemName} {auction.Uuid} ({ExtractRelevantEnchants(auction).Count} {relevantAuctions.Count})");
+                Console.WriteLine($"Not enough relevant auctions for {referenceElement.Key} {auction.Uuid} ({ExtractRelevantEnchants(auction).Count} {relevantAuctions.Count})");
 
                 // the overall median was deemed to inaccurate
                 return null;
