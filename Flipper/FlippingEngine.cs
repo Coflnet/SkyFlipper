@@ -405,12 +405,13 @@ namespace Coflnet.Sky.Flipper
             {
                 var selects = gems.Select(async (g) =>
                 {
+                    string route = "";
                     try
                     {
                         var type = g.Key.Split("_").First();
                         if (type == "COMBAT" || type == "DEFENSIVE" || type == "UNIVERSAL")
                             type = auction.FlatenedNBT[g.Key + "_gem"];
-                        var route = $"/api/item/price/{g.Value}_{type}_GEM/current";
+                        route = $"/api/item/price/{g.Value}_{type}_GEM/current";
                         var result = await commandsClient.ExecuteGetAsync(new RestSharp.RestRequest(route));
                         var profit = JsonConvert.DeserializeObject<CurrentPrice>(result.Content).sell;
                         if (g.Key == "PERFECT")
@@ -419,7 +420,7 @@ namespace Coflnet.Sky.Flipper
                     }
                     catch(Exception e)
                     {
-                        dev.Logger.Instance.Error(e,"retrieving gem price");
+                        dev.Logger.Instance.Error(e,"retrieving gem price at " + route);
                         return 0;
                     }
                 });

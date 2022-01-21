@@ -29,7 +29,7 @@ namespace Coflnet.Sky.Flipper
                 c.SwaggerDoc("v1", new OpenApiInfo { Title = "SkyFlipper", Version = "v1" });
             });
             services.AddJaeger();
-            
+
             services.AddDbContext<HypixelContext>(
                 dbContextOptions => dbContextOptions
                     .UseMySql(Configuration["DBCONNECTION"], new MariaDbServerVersion(Configuration["MARIADB_VERSION"]))
@@ -46,9 +46,9 @@ namespace Coflnet.Sky.Flipper
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
-                app.UseSwagger();
-                app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "SkyFlipper v1"));
             }
+            app.UseSwagger();
+            app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "SkyFlipper v1"));
 
             app.UseRouting();
 
