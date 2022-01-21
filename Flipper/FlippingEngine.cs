@@ -443,7 +443,7 @@ namespace Coflnet.Sky.Flipper
         /// <returns></returns>
         public async Task<RelevantElement> GetRelevantAuctionsCache(SaveAuction auction, FindTracking tracking)
         {
-            var key = $"o{auction.ItemId}{auction.ItemName}{auction.Tier}{auction.Bin}{auction.Count}";
+            var key = $"o{auction.Tag}{auction.ItemName}{auction.Tier}{auction.Count}";
             if (relevantReforges.Contains(auction.Reforge))
                 key += auction.Reforge;
             var relevant = ExtractRelevantEnchants(auction);
