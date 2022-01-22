@@ -413,6 +413,8 @@ namespace Coflnet.Sky.Flipper
                             type = auction.FlatenedNBT[g.Key + "_gem"];
                         route = $"/api/item/price/{g.Value}_{type}_GEM/current";
                         var result = await commandsClient.ExecuteGetAsync(new RestSharp.RestRequest(route));
+                        if(result.StatusCode != System.Net.HttpStatusCode.OK)
+                            throw new Exception("Response has the status " + result.StatusCode);
                         var profit = JsonConvert.DeserializeObject<CurrentPrice>(result.Content).sell;
                         if (g.Key == "PERFECT")
                             return profit - 500_000;
@@ -434,7 +436,7 @@ namespace Coflnet.Sky.Flipper
         }
 
         private static HashSet<string> ignoredNbt = new HashSet<string>()
-                { "uid", "spawnedFor", "bossId", "exp", "uuid" };
+                { "uid", "spawnedFor", "bossId", "exp", "uuid", "hpc", "active" };
         /// <summary>
         /// Gets relevant items for an auction, checks cache first
         /// </summary>
