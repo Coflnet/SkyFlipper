@@ -43,11 +43,11 @@ namespace Coflnet.Sky.Flipper
                     .CreateCounter("already_sold_flips", "Flips that were already sold for premium users for some reason");
         Prometheus.Histogram time = Prometheus.Metrics.CreateHistogram("time_to_find_flip", "How long did it take to find a flip", new Prometheus.HistogramConfiguration()
         {
-            Buckets = Prometheus.Histogram.LinearBuckets(start: 10, width: 2, count: 10)
+            Buckets = Prometheus.Histogram.LinearBuckets(start: 7, width: 2, count: 10)
         });
         static Prometheus.HistogramConfiguration buckets = new Prometheus.HistogramConfiguration()
         {
-            Buckets = Prometheus.Histogram.LinearBuckets(start: 10, width: 1, count: 10)
+            Buckets = Prometheus.Histogram.LinearBuckets(start: 7, width: 1, count: 10)
         };
         static Prometheus.Histogram runtroughTime = Prometheus.Metrics.CreateHistogram("sky_flipper_auction_to_send_flip_seconds", "Seconds from loading the auction to finding the flip. (should be close to 10)",
             buckets);
@@ -88,6 +88,33 @@ namespace Coflnet.Sky.Flipper
             return ProcessPotentialFlipps(CancellationToken.None);
         }
 
+        public async Task QueckActiveAuctionsForFlips(CancellationToken stopToken)
+        {
+            using var lpp = new ProducerBuilder<string, LowPricedAuction>(producerConfig).SetValueSerializer(SerializerFactory.GetSerializer<LowPricedAuction>()).Build();
+            using var context = new HypixelContext();
+            var max = DateTime.UtcNow.Add(TimeSpan.FromMinutes(6));
+            var min = DateTime.UtcNow.Add(TimeSpan.FromMinutes(3));
+            var taskFactory = new TaskFactory(new LimitedConcurrencyLevelTaskScheduler(1));
+            var toCheck = context.Auctions
+                .Where(a => a.Id > context.Auctions.Max(a => a.Id) - 1000000 && a.End < max && a.End > min && !a.Bin)
+                .Include(a => a.NbtData)
+                .Include(a => a.Enchantments)
+                .Include(a => a.NBTLookup);
+
+            foreach (var auction in toCheck)
+            {
+                var span = OpenTracing.Util.GlobalTracer.Instance.BuildSpan("AuctionFlip")
+                                           .WithTag("uuid", auction.Uuid);
+                using var scope = span.StartActive();
+                await Task.Delay(100, stopToken);
+                _ = taskFactory.StartNew(async () =>
+                {
+                    var res = await NewAuction(auction, lpp, scope);
+                }, stopToken);
+            }
+            Console.WriteLine($"Checked {toCheck.Count()} auctions for flips");
+        }
+
         public async Task ProcessPotentialFlipps(CancellationToken cancleToken)
         {
             try
@@ -123,6 +150,13 @@ namespace Coflnet.Sky.Flipper
                                 var cr = c.Consume(cancleToken);
                                 if (cr == null)
                                     continue;
+
+
+                                var auction = cr.Message.Value;
+                                // makes no sense to check old auctions
+                                if (auction.Start < DateTime.Now - TimeSpan.FromMinutes(5) || !auction.Bin)
+                                    continue;
+
                                 var tracer = OpenTracing.Util.GlobalTracer.Instance;
                                 OpenTracing.ISpanContext parent;
                                 if (cr.Message.Value.TraceContext == null)
@@ -142,9 +176,9 @@ namespace Coflnet.Sky.Flipper
                                     var span = tracer.BuildSpan("SearchFlip")
                                             .WithTag("uuid", cr.Message.Value.Uuid);
                                     using var scope = span.StartActive();
-                                    await throttler.WaitAsync();
                                     try
                                     {
+                                        await throttler.WaitAsync();
                                         await ProcessSingleFlip(p, cr, lpp, scope);
                                     }
                                     catch (Exception e)
@@ -193,7 +227,9 @@ namespace Coflnet.Sky.Flipper
             var startTime = DateTime.Now;
             FlipInstance flip = null;
 
-            flip = await NewAuction(cr.Message.Value, lpp, span);
+            var auction = cr.Message.Value;
+
+            flip = await NewAuction(auction, lpp, span);
 
             if (flip != null)
             {
@@ -226,10 +262,6 @@ namespace Coflnet.Sky.Flipper
         {
             // blacklist
             if (auction.ItemName == "null")
-                return null;
-
-            // makes no sense to check old auctions
-            if (auction.Start < DateTime.Now - TimeSpan.FromMinutes(5))
                 return null;
 
             var price = (auction.HighestBidAmount == 0 ? auction.StartingBid : (auction.HighestBidAmount * 1.1)) / auction.Count;
@@ -413,16 +445,16 @@ namespace Coflnet.Sky.Flipper
                             type = auction.FlatenedNBT[g.Key + "_gem"];
                         route = $"/api/item/price/{g.Value}_{type}_GEM/current";
                         var result = await commandsClient.ExecuteGetAsync(new RestSharp.RestRequest(route));
-                        if(result.StatusCode != System.Net.HttpStatusCode.OK)
+                        if (result.StatusCode != System.Net.HttpStatusCode.OK)
                             throw new Exception("Response has the status " + result.StatusCode);
                         var profit = JsonConvert.DeserializeObject<CurrentPrice>(result.Content).sell;
                         if (g.Key == "PERFECT")
                             return profit - 500_000;
                         return profit - 100_000;
                     }
-                    catch(Exception e)
+                    catch (Exception e)
                     {
-                        dev.Logger.Instance.Error(e,"retrieving gem price at " + route);
+                        dev.Logger.Instance.Error(e, "retrieving gem price at " + route);
                         return 0;
                     }
                 });
@@ -771,7 +803,7 @@ namespace Coflnet.Sky.Flipper
             {
                 var matchingCount = highLvlEnchantList.Count;
                 if (reduced) // reduce to find match
-                    highLvlEnchantList = highLvlEnchantList.Where(e => e.Level > 2).ToList();
+                    highLvlEnchantList = new List<Enchantment>() { Constants.SelectBest(auction.Enchantments) };
                 var maxImportantEnchants = highLvlEnchantList.Count() + 1 + (ultiType == Enchantment.EnchantmentType.unknown ? 0 : 1);
                 var highLevel = highLvlEnchantList.Select(r => new { r.Type, r.Level }).ToList();
                 var highLvlHash = highLvlEnchantList.Select(r => r.Type).ToHashSet();

@@ -38,6 +38,7 @@ namespace Coflnet.Sky.Flipper
             );
 
             services.AddHostedService<FlipperService>();
+            services.AddHostedService<AuctionCheckService>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
