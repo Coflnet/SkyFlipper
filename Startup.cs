@@ -39,6 +39,15 @@ namespace Coflnet.Sky.Flipper
 
             services.AddHostedService<FlipperService>();
             services.AddHostedService<AuctionCheckService>();
+            NBT.Instance = new NoWriteNbt();
+        }
+
+        public class NoWriteNbt : NBT
+        {
+            protected override NBTValue AddNewValueToDb((short, string) k, HypixelContext context)
+            {
+                return new NBTValue();
+            }
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

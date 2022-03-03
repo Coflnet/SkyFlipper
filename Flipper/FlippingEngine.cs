@@ -681,6 +681,10 @@ namespace Coflnet.Sky.Flipper
                 select = AddNBTSelect(select, flatNbt, "MUSIC");
             if (flatNbt.ContainsKey("ENCHANT"))
                 select = AddNBTSelect(select, flatNbt, "ENCHANT");
+            if (flatNbt.ContainsKey("DRAGON"))
+                select = AddNBTSelect(select, flatNbt, "DRAGON");
+            if (flatNbt.ContainsKey("TIDAL"))
+                select = AddNBTSelect(select, flatNbt, "TIDAL");
 
 
 
