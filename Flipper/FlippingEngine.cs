@@ -677,6 +677,10 @@ namespace Coflnet.Sky.Flipper
                 select = AddCandySelect(select, flatNbt, "candyUsed");
             if (flatNbt.ContainsKey("art_of_war_count"))
                 select = AddNBTSelect(select, flatNbt, "art_of_war_count");
+            if (flatNbt.ContainsKey("MUSIC"))
+                select = AddNBTSelect(select, flatNbt, "MUSIC");
+            if (flatNbt.ContainsKey("ENCHANT"))
+                select = AddNBTSelect(select, flatNbt, "ENCHANT");
 
 
 
