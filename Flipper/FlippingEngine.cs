@@ -77,10 +77,10 @@ namespace Coflnet.Sky.Flipper
         public FlipperEngine()
         {
             // results are not relevant if older than 5 seconds
-            commandsClient.Timeout = 5000;
+            apiClient.Timeout = 5000;
         }
 
-        private RestSharp.RestClient commandsClient = new RestSharp.RestClient("http://" + SimplerConfig.Config.Instance["skycommands_host"]);
+        private RestSharp.RestClient apiClient = new RestSharp.RestClient(SimplerConfig.Config.Instance["api_base_url"]);
 
 
         public Task ProcessPotentialFlipps()
@@ -444,7 +444,7 @@ namespace Coflnet.Sky.Flipper
                         if (type == "COMBAT" || type == "DEFENSIVE" || type == "UNIVERSAL")
                             type = auction.FlatenedNBT[g.Key + "_gem"];
                         route = $"/api/item/price/{g.Value}_{type}_GEM/current";
-                        var result = await commandsClient.ExecuteGetAsync(new RestSharp.RestRequest(route));
+                        var result = await apiClient.ExecuteGetAsync(new RestSharp.RestRequest(route));
                         if (result.StatusCode != System.Net.HttpStatusCode.OK)
                             throw new Exception("Response has the status " + result.StatusCode);
                         var profit = JsonConvert.DeserializeObject<CurrentPrice>(result.Content).sell;
