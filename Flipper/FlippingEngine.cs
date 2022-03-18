@@ -745,7 +745,8 @@ namespace Coflnet.Sky.Flipper
                 .Where(a => a.End > oldest && a.End < youngest)
                 //.OrderByDescending(a=>a.Id)
                 .Include(a => a.NbtData)
-                .Take(limit);
+                .Take(limit)
+                .AsSplitQuery();
         }
 
         private static IQueryable<SaveAuction> AddNBTSelect(IQueryable<SaveAuction> select, Dictionary<string, string> flatNbt, string keyValue)
