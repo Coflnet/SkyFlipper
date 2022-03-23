@@ -326,6 +326,7 @@ namespace Coflnet.Sky.Flipper
             }
             if (auction.Context != null)
                 auction.Context["fsend"] = (DateTime.Now - auction.FindTime).ToString();
+            additionalProps["refAge"] = ((int)(DateTime.UtcNow - referenceElement.Oldest).TotalDays).ToString();
 
             var lowPrices = new LowPricedAuction()
             {
