@@ -1,4 +1,4 @@
-using hypixel;
+using Coflnet.Sky.Core;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;

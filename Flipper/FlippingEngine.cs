@@ -7,7 +7,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Confluent.Kafka;
-using hypixel;
+using Coflnet.Sky.Core;
 using MessagePack;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -68,7 +68,7 @@ namespace Coflnet.Sky.Flipper
                     UltiEnchantList.Add(item);
                 }
             }
-            foreach (var item in Coflnet.Sky.Constants.RelevantEnchants)
+            foreach (var item in Coflnet.Sky.Core.Constants.RelevantEnchants)
             {
                 RelevantEnchants.AddOrUpdate(item.Type, item.Level, (k, o) => item.Level);
             }
@@ -526,7 +526,7 @@ namespace Coflnet.Sky.Flipper
         {
             var itemData = auction.NbtData.Data;
             var clearedName = auction.Reforge != ItemReferences.Reforge.None ? ItemReferences.RemoveReforge(auction.ItemName) : auction.ItemName;
-            var itemId = ItemDetails.Instance.GetItemIdForName(auction.Tag, false);
+            var itemId = ItemDetails.Instance.GetItemIdForTag(auction.Tag, false);
             var youngest = DateTime.Now;
             List<Enchantment> relevantEnchants = ExtractRelevantEnchants(auction);
             //var matchingCount = relevantEnchants.Count > 3 ? relevantEnchants.Count * 2 / 3 : relevantEnchants.Count;
@@ -587,7 +587,7 @@ namespace Coflnet.Sky.Flipper
                 .ToList();
         }
 
-        private readonly static HashSet<ItemReferences.Reforge> relevantReforges = Coflnet.Sky.Constants.RelevantReforges;
+        private readonly static HashSet<ItemReferences.Reforge> relevantReforges = Constants.RelevantReforges;
 
         private static IQueryable<SaveAuction> GetSelect(
             SaveAuction auction,
@@ -692,8 +692,10 @@ namespace Coflnet.Sky.Flipper
             if (flatNbt.ContainsKey("heldItem"))
             {
                 var keyId = NBT.GetLookupKey("heldItem");
-                var val = ItemDetails.Instance.GetItemIdForName(flatNbt["heldItem"]);
-                select = select.Where(a => a.NBTLookup.Where(n => n.KeyId == keyId && n.Value == val).Any());
+                var val = ItemDetails.Instance.GetItemIdForTag(flatNbt["heldItem"]);
+                // only include boosts if there are still exp to be boosted
+                if (flatNbt.TryGetValue("exp", out string expString) && int.Parse(expString) < 24_000_000 || !flatNbt["heldItem"].Contains("BOOST"))
+                    select = select.Where(a => a.NBTLookup.Where(n => n.KeyId == keyId && n.Value == val).Any());
             }
             else if (flatNbt.ContainsKey("candyUsed")) // every pet has candyUsed attribute
             {

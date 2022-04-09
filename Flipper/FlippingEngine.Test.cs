@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using hypixel;
+using Coflnet.Sky.Core;
 using Newtonsoft.Json;
 using NUnit.Framework;
 

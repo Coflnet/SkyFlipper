@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using System.Runtime.Serialization;
-using hypixel;
+using Coflnet.Sky.Core;
 using Microsoft.EntityFrameworkCore;
 
 namespace Coflnet.Sky.Flipper
