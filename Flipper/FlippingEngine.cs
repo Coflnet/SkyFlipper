@@ -290,12 +290,7 @@ namespace Coflnet.Sky.Flipper
             }
             else
             {
-                medianPrice = (await Task.WhenAll(relevantAuctions
-                                //.OrderByDescending(a => a.HighestBidAmount)
-                                .Select(async a => a.HighestBidAmount / (a.Count == 0 ? 1 : a.Count) / (a.Count == auction.Count ? 1 : 2) - await GetGemstoneWorth(a))))
-                                .OrderByDescending(a => a)
-                                .Skip(relevantAuctions.Count / 2)
-                                .FirstOrDefault();
+                medianPrice = await GetWeightedMedian(auction, relevantAuctions);
             }
             var reductionDueToCount = Math.Pow(1.01, referenceElement.HitCount);
             int additionalWorth = await GetGemstoneWorth(auction);
@@ -396,6 +391,23 @@ namespace Coflnet.Sky.Flipper
             time.Observe((DateTime.Now - auction.FindTime).TotalSeconds);
 
             return flip;
+        }
+
+        public async Task<long> GetWeightedMedian(SaveAuction auction, List<SaveAuction> relevantAuctions)
+        {
+            var auctions = (await Task.WhenAll(relevantAuctions
+                                //.OrderByDescending(a => a.HighestBidAmount)
+                                .Select(async a => new {a, value = a.HighestBidAmount / (a.Count == 0 ? 1 : a.Count) / (a.Count == auction.Count ? 1 : 2) - await GetGemstoneWorth(a) })))
+                                .ToList();
+            var fullTime = auctions.Select(a=>a.value).OrderByDescending(a => a)
+                                .Skip(relevantAuctions.Count / 2)
+                                .FirstOrDefault();
+            var shortTerm = auctions.OrderByDescending(a=>a.a.End).Take(3).OrderByDescending(a => a.value)
+                                .Select(a=>a.value)
+                                .Skip(1)
+                                .FirstOrDefault();
+
+            return Math.Min(fullTime, shortTerm);
         }
 
         private async Task SaveHitOnFlip(RelevantElement referenceElement, SaveAuction auction)

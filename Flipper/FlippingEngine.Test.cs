@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Coflnet.Sky.Core;
 using Newtonsoft.Json;
 using NUnit.Framework;
@@ -85,10 +86,10 @@ namespace Coflnet.Sky.Flipper
                 FlipperEngine.ExtractRelevantEnchants(newAuction),
                 GetReferenceAuctions().AsQueryable(),
                 0,
-                Enchantment.EnchantmentType.unknown, 
+                Enchantment.EnchantmentType.unknown,
                 tracking);
             // only one of the auctions matches
-            Assert.AreEqual("fc92b460920d486494732beeed57ed77",result.Single().Uuid);
+            Assert.AreEqual("fc92b460920d486494732beeed57ed77", result.Single().Uuid);
         }
 
 
@@ -97,6 +98,26 @@ namespace Coflnet.Sky.Flipper
             var data = System.IO.File.ReadAllText("Mock/ultireflist.json");
             Console.WriteLine(data.Truncate(30));
             return JsonConvert.DeserializeObject<List<SaveAuction>>(data);
+        }
+
+        [Test]
+        public async Task GetWeightedMedian()
+        {
+            var low = new SaveAuction(){ HighestBidAmount = 3, End = DateTime.Now - TimeSpan.FromSeconds(5)};
+            var target = new SaveAuction(){ HighestBidAmount = 7, End = DateTime.Now - TimeSpan.FromSeconds(6)};
+            var highest = new SaveAuction(){ HighestBidAmount = 11, End = DateTime.Now - TimeSpan.FromSeconds(7)};
+            var newest = new SaveAuction(){ HighestBidAmount = 4, End = DateTime.Now};
+            var references = new List<SaveAuction>()
+            {
+                low,
+                target,target,
+                newest,
+                highest,
+                highest
+            };
+            var result = await new FlipperEngine().GetWeightedMedian(new SaveAuction(), references);
+            // chooses the recent median
+            Assert.AreEqual(newest.HighestBidAmount, result);
         }
     }
 }
