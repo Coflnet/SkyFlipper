@@ -706,7 +706,7 @@ namespace Coflnet.Sky.Flipper
                 var keyId = NBT.GetLookupKey("heldItem");
                 var val = ItemDetails.Instance.GetItemIdForTag(flatNbt["heldItem"]);
                 // only include boosts if there are still exp to be boosted
-                if (flatNbt.TryGetValue("exp", out string expString) && int.Parse(expString) < 24_000_000 || !flatNbt["heldItem"].Contains("BOOST"))
+                if (flatNbt.TryGetValue("exp", out string expString) && double.Parse(expString) < 24_000_000 || !flatNbt["heldItem"].Contains("BOOST"))
                     select = select.Where(a => a.NBTLookup.Where(n => n.KeyId == keyId && n.Value == val).Any());
             }
             else if (flatNbt.ContainsKey("candyUsed")) // every pet has candyUsed attribute
