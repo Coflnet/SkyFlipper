@@ -1,4 +1,5 @@
 using Coflnet.Sky.Core;
+using Coflnet.Sky.Items.Client.Api;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
@@ -36,6 +37,13 @@ namespace Coflnet.Sky.Flipper
                     .EnableSensitiveDataLogging() // <-- These two calls are optional but help
                     .EnableDetailedErrors()       // <-- with debugging (remove for production).
             );
+
+
+            services.AddSingleton<IItemsApi>(context =>
+            {
+                var config = context.GetRequiredService<IConfiguration>();
+                return new ItemsApi(config["ITEMS_BASE_URL"]);
+            });
 
             services.AddHostedService<FlipperService>();
             services.AddHostedService<AuctionCheckService>();

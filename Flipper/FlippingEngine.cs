@@ -57,6 +57,8 @@ namespace Coflnet.Sky.Flipper
         public DateTime LastLiveProbe = DateTime.Now;
         private SemaphoreSlim throttler = new SemaphoreSlim(25);
 
+        public HashSet<long> ValuablePetItemIds = new ();
+
         static FlipperEngine()
         {
             Instance = new FlipperEngine();
@@ -397,13 +399,13 @@ namespace Coflnet.Sky.Flipper
         {
             var auctions = (await Task.WhenAll(relevantAuctions
                                 //.OrderByDescending(a => a.HighestBidAmount)
-                                .Select(async a => new {a, value = a.HighestBidAmount / (a.Count == 0 ? 1 : a.Count) / (a.Count == auction.Count ? 1 : 2) - await GetGemstoneWorth(a) })))
+                                .Select(async a => new { a, value = a.HighestBidAmount / (a.Count == 0 ? 1 : a.Count) / (a.Count == auction.Count ? 1 : 2) - await GetGemstoneWorth(a) })))
                                 .ToList();
-            var fullTime = auctions.Select(a=>a.value).OrderByDescending(a => a)
+            var fullTime = auctions.Select(a => a.value).OrderByDescending(a => a)
                                 .Skip(relevantAuctions.Count / 2)
                                 .FirstOrDefault();
-            var shortTerm = auctions.OrderByDescending(a=>a.a.End).Take(3).OrderByDescending(a => a.value)
-                                .Select(a=>a.value)
+            var shortTerm = auctions.OrderByDescending(a => a.a.End).Take(3).OrderByDescending(a => a.value)
+                                .Select(a => a.value)
                                 .Skip(1)
                                 .FirstOrDefault();
 
@@ -708,6 +710,8 @@ namespace Coflnet.Sky.Flipper
                 // only include boosts if there are still exp to be boosted
                 if (flatNbt.TryGetValue("exp", out string expString) && double.Parse(expString) < 24_000_000 || !flatNbt["heldItem"].Contains("BOOST"))
                     select = select.Where(a => a.NBTLookup.Where(n => n.KeyId == keyId && n.Value == val).Any());
+                else
+                    select = select.Where(a => !a.NBTLookup.Where(n => n.KeyId == keyId && Instance.ValuablePetItemIds.Contains(n.Value)).Any());
             }
             else if (flatNbt.ContainsKey("candyUsed")) // every pet has candyUsed attribute
             {
