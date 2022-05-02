@@ -418,7 +418,7 @@ namespace Coflnet.Sky.Flipper
             if (referenceElement.HitCount % 5 == 1)
                 Console.WriteLine($"hit {referenceElement.Key} {referenceElement.HitCount} times");
 
-            var storeTime = DateTime.Now - referenceElement.QueryTime + TimeSpan.FromHours(2);
+            var storeTime = referenceElement.QueryTime - DateTime.Now + TimeSpan.FromHours(2);
             if (storeTime < TimeSpan.Zero)
                 storeTime = TimeSpan.FromSeconds(1);
             referenceElement.HitCount++;
