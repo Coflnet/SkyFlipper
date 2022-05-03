@@ -702,22 +702,7 @@ namespace Coflnet.Sky.Flipper
                 select = AddNBTSelect(select, flatNbt, "TIDAL");
 
 
-
-            if (flatNbt.ContainsKey("heldItem"))
-            {
-                var keyId = NBT.GetLookupKey("heldItem");
-                var val = ItemDetails.Instance.GetItemIdForTag(flatNbt["heldItem"]);
-                // only include boosts if there are still exp to be boosted
-                if (flatNbt.TryGetValue("exp", out string expString) && double.Parse(expString) < 24_000_000 || !flatNbt["heldItem"].Contains("BOOST"))
-                    select = select.Where(a => a.NBTLookup.Where(n => n.KeyId == keyId && n.Value == val).Any());
-                else
-                    select = select.Where(a => !a.NBTLookup.Where(n => n.KeyId == keyId && Instance.ValuablePetItemIds.Contains(n.Value)).Any());
-            }
-            else if (flatNbt.ContainsKey("candyUsed")) // every pet has candyUsed attribute
-            {
-                var keyId = NBT.GetLookupKey("heldItem");
-                select = select.Where(a => !a.NBTLookup.Where(n => n.KeyId == keyId).Any());
-            }
+            select = AddPetItemSelect(select, flatNbt);
 
             if (flatNbt.ContainsKey("skin"))
             {
@@ -766,6 +751,32 @@ namespace Coflnet.Sky.Flipper
                 .Include(a => a.NbtData)
                 .Take(limit)
                 .AsSplitQuery();
+        }
+
+        private static IQueryable<SaveAuction> AddPetItemSelect(IQueryable<SaveAuction> select, Dictionary<string, string> flatNbt)
+        {
+            if (flatNbt.ContainsKey("heldItem"))
+            {
+                var keyId = NBT.GetLookupKey("heldItem");
+                var val = ItemDetails.Instance.GetItemIdForTag(flatNbt["heldItem"]);
+                // only include boosts if there are still exp to be boosted
+                if (ShouldPetItemMatch(flatNbt))
+                    select = select.Where(a => a.NBTLookup.Where(n => n.KeyId == keyId && n.Value == val).Any());
+                else
+                    select = select.Where(a => !a.NBTLookup.Where(n => n.KeyId == keyId && Instance.ValuablePetItemIds.Contains(n.Value)).Any());
+            }
+            else if (flatNbt.ContainsKey("candyUsed")) // every pet has candyUsed attribute
+            {
+                var keyId = NBT.GetLookupKey("heldItem");
+                select = select.Where(a => !a.NBTLookup.Where(n => n.KeyId == keyId).Any());
+            }
+
+            return select;
+        }
+
+        public static bool ShouldPetItemMatch(Dictionary<string, string> flatNbt)
+        {
+            return flatNbt.TryGetValue("exp", out string expString) && double.Parse(expString) < 24_000_000 || !(flatNbt["heldItem"].Contains("SKILL") && flatNbt["heldItem"].Contains("BOOST"));
         }
 
         private static IQueryable<SaveAuction> AddNBTSelect(IQueryable<SaveAuction> select, Dictionary<string, string> flatNbt, string keyValue)

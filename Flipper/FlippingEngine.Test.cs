@@ -119,5 +119,15 @@ namespace Coflnet.Sky.Flipper
             // chooses the recent median
             Assert.AreEqual(newest.HighestBidAmount, result);
         }
+        [Test]
+        [TestCase("PET_ITEM_ALL_SKILLS_BOOST_COMMON", 30000000, false)]
+        [TestCase("PET_ITEM_ALL_SKILLS_BOOST_COMMON", 3000000, true)]
+        [TestCase("PET_ITEM_TIER_BOOST", 30000000, true)]
+        [TestCase("PET_ITEM_TIER_BOOST", 300000, true)]
+        public void PetItemSelects(string item, long exp, bool target)
+        {
+            Assert.AreEqual(target, FlipperEngine.ShouldPetItemMatch(new() { { "heldItem", item }, {"exp", exp.ToString()} }));
+        }
+
     }
 }
