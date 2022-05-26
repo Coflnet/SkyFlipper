@@ -57,7 +57,7 @@ namespace Coflnet.Sky.Flipper
         public DateTime LastLiveProbe = DateTime.Now;
         private SemaphoreSlim throttler = new SemaphoreSlim(25);
 
-        public HashSet<long> ValuablePetItemIds = new ();
+        public HashSet<long> ValuablePetItemIds = new();
 
         static FlipperEngine()
         {
@@ -700,6 +700,13 @@ namespace Coflnet.Sky.Flipper
                 select = AddNBTSelect(select, flatNbt, "DRAGON");
             if (flatNbt.ContainsKey("TIDAL"))
                 select = AddNBTSelect(select, flatNbt, "TIDAL");
+
+            if (auction.Tag.EndsWith("_DRILL"))
+            {
+                select = AddNBTSelect(select, flatNbt, "drill_part_engine")
+                        .AddNBTSelect(select, flatNbt, "drill_part_fuel_tank")
+                        .AddNBTSelect(select, flatNbt, "drill_part_upgrade_module");
+            }
 
 
             select = AddPetItemSelect(select, flatNbt);
