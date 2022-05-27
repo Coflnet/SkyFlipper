@@ -703,9 +703,9 @@ namespace Coflnet.Sky.Flipper
 
             if (auction.Tag.EndsWith("_DRILL"))
             {
-                select = AddNBTSelect(select, flatNbt, "drill_part_engine")
-                        .AddNBTSelect(select, flatNbt, "drill_part_fuel_tank")
-                        .AddNBTSelect(select, flatNbt, "drill_part_upgrade_module");
+                select = AddNBTSelect(select, flatNbt, "drill_part_engine");
+                select = AddNBTSelect(select, flatNbt, "drill_part_fuel_tank");
+                select = AddNBTSelect(select, flatNbt, "drill_part_upgrade_module");
             }
 
 
