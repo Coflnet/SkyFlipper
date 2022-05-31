@@ -723,6 +723,9 @@ namespace Coflnet.Sky.Flipper
                 var keyId = NBT.GetLookupKey("color");
                 var val = NBT.GetColor(flatNbt["color"]);
                 select = select.Where(a => a.NBTLookup.Where(n => n.KeyId == keyId && n.Value == val).Any());
+
+                if (flatNbt.ContainsKey("dye_item"))
+                    select = AddNBTSelect(select, flatNbt, "dye_item");
             }
 
             foreach (var item in flatNbt)
