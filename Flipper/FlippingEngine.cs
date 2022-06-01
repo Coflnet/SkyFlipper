@@ -701,7 +701,7 @@ namespace Coflnet.Sky.Flipper
             if (flatNbt.ContainsKey("TIDAL"))
                 select = AddNBTSelect(select, flatNbt, "TIDAL");
 
-            if (auction.Tag.EndsWith("_DRILL"))
+            if (auction.Tag.Contains("_DRILL"))
             {
                 select = AddNBTSelect(select, flatNbt, "drill_part_engine");
                 select = AddNBTSelect(select, flatNbt, "drill_part_fuel_tank");
