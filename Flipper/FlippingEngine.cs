@@ -618,8 +618,10 @@ namespace Coflnet.Sky.Flipper
         {
             var select = context.Auctions
                 .Where(a => a.ItemId == itemId)
-                .Where(a => a.HighestBidAmount > 0)
-                .Where(a => a.Tier == auction.Tier);
+                .Where(a => a.HighestBidAmount > 0);
+
+            if(auction.Tag != "ENCHANTED_BOOK") // the rarity is often used from scamming but doesn't change price
+                select = select.Where(a => a.Tier == auction.Tier);
 
             byte ultiLevel = 127;
             var flatNbt = auction.FlatenedNBT ?? new Dictionary<string, string>();
