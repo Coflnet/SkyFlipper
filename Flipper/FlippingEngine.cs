@@ -620,7 +620,7 @@ namespace Coflnet.Sky.Flipper
                 .Where(a => a.ItemId == itemId)
                 .Where(a => a.HighestBidAmount > 0);
 
-            if(auction.Tag != "ENCHANTED_BOOK") // the rarity is often used from scamming but doesn't change price
+            if (auction.Tag != "ENCHANTED_BOOK") // the rarity is often used from scamming but doesn't change price
                 select = select.Where(a => a.Tier == auction.Tier);
 
             byte ultiLevel = 127;
@@ -632,10 +632,7 @@ namespace Coflnet.Sky.Flipper
                 ultiType = ulti.Type;
             }
 
-            if (relevantReforges.Contains(auction.Reforge))
-                select = select.Where(a => a.Reforge == auction.Reforge);
-            else
-                select = select.Where(a => !relevantReforges.Contains(a.Reforge));
+            select = AddReforgeSelect(auction, reduced, select);
 
             if (auction.Count > 1 && !reduced) // try to match exact count
                 select = select.Where(s => s.Count == auction.Count);
@@ -763,6 +760,17 @@ namespace Coflnet.Sky.Flipper
                 .Include(a => a.NbtData)
                 .Take(limit)
                 .AsSplitQuery();
+        }
+
+        private static IQueryable<SaveAuction> AddReforgeSelect(SaveAuction auction, bool reduced, IQueryable<SaveAuction> select)
+        {
+            // ancient is low volume (hasn't that many references)
+            var shouldDropAncient = reduced && auction.Reforge == ItemReferences.Reforge.ancient;
+            if (relevantReforges.Contains(auction.Reforge) && !shouldDropAncient)
+                select = select.Where(a => a.Reforge == auction.Reforge);
+            else
+                select = select.Where(a => !relevantReforges.Contains(a.Reforge));
+            return select;
         }
 
         private static IQueryable<SaveAuction> AddPetItemSelect(IQueryable<SaveAuction> select, Dictionary<string, string> flatNbt)
