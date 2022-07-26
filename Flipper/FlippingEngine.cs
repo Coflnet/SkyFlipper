@@ -294,7 +294,7 @@ namespace Coflnet.Sky.Flipper
             {
                 medianPrice = await GetWeightedMedian(auction, relevantAuctions);
             }
-            var reductionDueToCount = Math.Pow(1.01, referenceElement.HitCount);
+            var reductionDueToCount = Math.Pow(1.02, referenceElement.HitCount);
             int additionalWorth = await GetGemstoneWorth(auction);
             var recomendedBuyUnder = (medianPrice * 0.9 + additionalWorth) / reductionDueToCount;
             if (recomendedBuyUnder < 1_000_000)
@@ -415,7 +415,7 @@ namespace Coflnet.Sky.Flipper
         private async Task SaveHitOnFlip(RelevantElement referenceElement, SaveAuction auction)
         {
 
-            if (referenceElement.HitCount % 5 == 1)
+            if (referenceElement.HitCount % 5 == 0)
                 Console.WriteLine($"hit {referenceElement.Key} {referenceElement.HitCount} times");
 
             var storeTime = referenceElement.QueryTime - DateTime.Now + TimeSpan.FromHours(2);
