@@ -111,7 +111,14 @@ namespace Coflnet.Sky.Flipper
                 await Task.Delay(100, stopToken);
                 _ = taskFactory.StartNew(async () =>
                 {
-                    var res = await NewAuction(auction, lpp, scope);
+                    try
+                    {
+                        var res = await NewAuction(auction, lpp, scope);
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine("testing auction" + e);
+                    }
                 }, stopToken);
             }
             Console.WriteLine($"Checked {toCheck.Count()} auctions for flips");
