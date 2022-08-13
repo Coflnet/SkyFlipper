@@ -108,18 +108,14 @@ namespace Coflnet.Sky.Flipper
                 var span = OpenTracing.Util.GlobalTracer.Instance.BuildSpan("AuctionFlip")
                                            .WithTag("uuid", auction.Uuid);
                 using var scope = span.StartActive();
-                await Task.Delay(100, stopToken);
-                _ = taskFactory.StartNew(async () =>
+                try
                 {
-                    try
-                    {
-                        var res = await NewAuction(auction, lpp, scope);
-                    }
-                    catch (Exception e)
-                    {
-                        Console.WriteLine("testing auction" + e);
-                    }
-                }, stopToken);
+                    var res = await NewAuction(auction, lpp, scope);
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine("testing auction" + e);
+                }
             }
             Console.WriteLine($"Checked {toCheck.Count()} auctions for flips");
         }
