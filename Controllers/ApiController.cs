@@ -16,12 +16,15 @@ namespace Coflnet.Sky.Flipper.Controllers
     {
         private readonly ILogger<FlippingController> _logger;
         private readonly HypixelContext dbContext;
+        private readonly FlipperEngine flipperEngine;
 
         public FlippingController(ILogger<FlippingController> logger,
-        HypixelContext context)
+        HypixelContext context,
+        FlipperEngine flipperEngine)
         {
             _logger = logger;
             dbContext = context;
+            this.flipperEngine = flipperEngine;
         }
 
         [HttpGet]
@@ -37,7 +40,7 @@ namespace Coflnet.Sky.Flipper.Controllers
             if(auction == null)
                 return new List<SaveAuction>();
 
-            return (await FlipperEngine.Instance.GetRelevantAuctionsCache(auction, new FindTracking())).references;
+            return (await flipperEngine.GetRelevantAuctionsCache(auction, new FindTracking())).references;
 
         }
 
@@ -45,7 +48,7 @@ namespace Coflnet.Sky.Flipper.Controllers
         [Route("/status")]
         public IActionResult Status(string uuid)
         {
-            if (FlipperEngine.Instance.LastLiveProbe < DateTime.Now - TimeSpan.FromMinutes(2.5))
+            if (flipperEngine.LastLiveProbe < DateTime.Now - TimeSpan.FromMinutes(2.5))
                 return StatusCode(500);
             return Ok();
         }

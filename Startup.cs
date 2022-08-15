@@ -1,3 +1,4 @@
+using Coflnet.Sky.Commands.Shared;
 using Coflnet.Sky.Core;
 using Coflnet.Sky.Items.Client.Api;
 using Microsoft.AspNetCore.Builder;
@@ -47,6 +48,10 @@ namespace Coflnet.Sky.Flipper
 
             services.AddHostedService<FlipperService>();
             services.AddHostedService<AuctionCheckService>();
+
+            services.AddSingleton<GemPriceService>();
+            services.AddSingleton<FlipperEngine>();
+            services.AddHostedService<GemPriceService>(di => di.GetRequiredService<GemPriceService>());
             NBT.Instance = new NoWriteNbt();
         }
 

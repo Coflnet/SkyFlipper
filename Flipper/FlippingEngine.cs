@@ -18,8 +18,6 @@ namespace Coflnet.Sky.Flipper
 {
     public class FlipperEngine
     {
-        public static FlipperEngine Instance { get; }
-
         public static readonly string ProduceTopic = SimplerConfig.Config.Instance["TOPICS:FLIP"];
         public static readonly string NewAuctionTopic = SimplerConfig.Config.Instance["TOPICS:NEW_AUCTION"];
         public static readonly string KafkaHost = SimplerConfig.Config.Instance["KAFKA_HOST"];
@@ -34,8 +32,8 @@ namespace Coflnet.Sky.Flipper
         private ConcurrentQueue<SaveAuction> PotetialFlipps = new ConcurrentQueue<SaveAuction>();
         private ConcurrentQueue<SaveAuction> LowPriceQueue = new ConcurrentQueue<SaveAuction>();
 
-        static private List<Enchantment.EnchantmentType> UltiEnchantList = new List<Enchantment.EnchantmentType>();
         internal IServiceScopeFactory serviceFactory;
+        private Commands.Shared.GemPriceService gemPriceService;
 
         Prometheus.Counter foundFlipCount = Prometheus.Metrics
                     .CreateCounter("flips_found", "Number of flips found");
@@ -61,13 +59,11 @@ namespace Coflnet.Sky.Flipper
 
         static FlipperEngine()
         {
-            Instance = new FlipperEngine();
             foreach (var item in Enum.GetValues(typeof(Enchantment.EnchantmentType)).Cast<Enchantment.EnchantmentType>())
             {
                 if (item.ToString().StartsWith("ultimate_", true, null))
                 {
                     UltimateEnchants.TryAdd(item, true);
-                    UltiEnchantList.Add(item);
                 }
             }
             foreach (var item in Coflnet.Sky.Core.Constants.RelevantEnchants)
@@ -76,10 +72,12 @@ namespace Coflnet.Sky.Flipper
             }
         }
 
-        public FlipperEngine()
+        public FlipperEngine(IServiceScopeFactory factory, Commands.Shared.GemPriceService gemPriceService)
         {
             // results are not relevant if older than 5 seconds
             apiClient.Timeout = 5000;
+            this.serviceFactory = factory;
+            this.gemPriceService = gemPriceService;
         }
 
         private RestSharp.RestClient apiClient = new RestSharp.RestClient(SimplerConfig.Config.Instance["api_base_url"]);
@@ -323,6 +321,8 @@ namespace Coflnet.Sky.Flipper
             if (additionalWorth > 0)
             {
                 additionalProps["worth"] = additionalWorth.ToString();
+                additionalProps["gem_prices"] = string.Join(",", gemPriceService.Prices.Select(p => p.ToString()));
+                Console.WriteLine("added prices " + string.Join(",", gemPriceService.Prices.Select(p => p.ToString())));
             }
             if (auction.Context != null)
                 auction.Context["fsend"] = (DateTime.Now - auction.FindTime).ToString();
@@ -449,40 +449,7 @@ namespace Coflnet.Sky.Flipper
 
         private async Task<int> GetGemstoneWorth(SaveAuction auction)
         {
-            var additionalWorth = 0;
-            var gems = auction.FlatenedNBT.Where(n => n.Value == "PERFECT" || n.Value == "FLAWLESS");
-            if (gems.Any())
-            {
-                var selects = gems.Select(async (g) =>
-                {
-                    string route = "";
-                    try
-                    {
-                        var type = g.Key.Split("_").First();
-                        if (type == "COMBAT" || type == "DEFENSIVE" || type == "UNIVERSAL")
-                            type = auction.FlatenedNBT[g.Key + "_gem"];
-                        route = $"/api/item/price/{g.Value}_{type}_GEM/current";
-                        var result = await apiClient.ExecuteGetAsync(new RestSharp.RestRequest(route));
-                        if (result.StatusCode != System.Net.HttpStatusCode.OK)
-                            throw new Exception("Response has the status " + result.StatusCode);
-                        var profit = JsonConvert.DeserializeObject<CurrentPrice>(result.Content).sell;
-                        if (g.Key == "PERFECT")
-                            return profit - 500_000;
-                        return profit - 100_000;
-                    }
-                    catch (Exception e)
-                    {
-                        dev.Logger.Instance.Error(e, "retrieving gem price at " + route);
-                        return 0;
-                    }
-                });
-                foreach (var item in selects)
-                {
-                    additionalWorth += Convert.ToInt32(await item);
-                }
-            }
-
-            return additionalWorth;
+            return await gemPriceService.GetGemstoneWorth(auction);
         }
 
         private static HashSet<string> ignoredNbt = new HashSet<string>()
@@ -606,7 +573,7 @@ namespace Coflnet.Sky.Flipper
 
         private readonly static HashSet<ItemReferences.Reforge> relevantReforges = Constants.RelevantReforges;
 
-        private static IQueryable<SaveAuction> GetSelect(
+        private IQueryable<SaveAuction> GetSelect(
             SaveAuction auction,
             HypixelContext context,
             string clearedName,
@@ -776,7 +743,7 @@ namespace Coflnet.Sky.Flipper
             return select;
         }
 
-        private static IQueryable<SaveAuction> AddPetItemSelect(IQueryable<SaveAuction> select, Dictionary<string, string> flatNbt)
+        private IQueryable<SaveAuction> AddPetItemSelect(IQueryable<SaveAuction> select, Dictionary<string, string> flatNbt)
         {
             if (flatNbt.ContainsKey("heldItem"))
             {
@@ -786,7 +753,7 @@ namespace Coflnet.Sky.Flipper
                 if (ShouldPetItemMatch(flatNbt))
                     select = select.Where(a => a.NBTLookup.Where(n => n.KeyId == keyId && n.Value == val).Any());
                 else
-                    select = select.Where(a => !a.NBTLookup.Where(n => n.KeyId == keyId && Instance.ValuablePetItemIds.Contains(n.Value)).Any());
+                    select = select.Where(a => !a.NBTLookup.Where(n => n.KeyId == keyId && ValuablePetItemIds.Contains(n.Value)).Any());
             }
             else if (flatNbt.ContainsKey("candyUsed")) // every pet has candyUsed attribute
             {

@@ -115,7 +115,7 @@ namespace Coflnet.Sky.Flipper
                 highest,
                 highest
             };
-            var result = await new FlipperEngine().GetWeightedMedian(new SaveAuction(), references);
+            var result = await new FlipperEngine(null,null).GetWeightedMedian(new SaveAuction(), references);
             // chooses the recent median
             Assert.AreEqual(newest.HighestBidAmount, result);
         }

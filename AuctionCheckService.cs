@@ -9,9 +9,11 @@ namespace Coflnet.Sky.Flipper
     public class AuctionCheckService : BackgroundService
     {
         private ILogger<AuctionCheckService> logger;
-        public AuctionCheckService(ILogger<AuctionCheckService> logger)
+        private FlipperEngine flipperEngine;
+        public AuctionCheckService(ILogger<AuctionCheckService> logger, FlipperEngine flipperEngine)
         {
             this.logger = logger;
+            this.flipperEngine = flipperEngine;
         }
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
@@ -19,7 +21,7 @@ namespace Coflnet.Sky.Flipper
                 try
                 {
                     var start = DateTime.UtcNow;
-                    await Flipper.FlipperEngine.Instance.QueckActiveAuctionsForFlips(stoppingToken);
+                    await flipperEngine.QueckActiveAuctionsForFlips(stoppingToken);
                     var toWait = start + TimeSpan.FromMinutes(1) - DateTime.UtcNow;
                     if (toWait > TimeSpan.Zero)
                         await Task.Delay(toWait);

@@ -10,17 +10,20 @@ namespace Coflnet.Sky.Flipper
     public class FlipperService : BackgroundService
     {
         IItemsApi itemsApi;
-        public FlipperService(IServiceScopeFactory factory, IItemsApi itemsApi)
+        private FlipperEngine flipperEngine;
+        public FlipperService(IItemsApi itemsApi, FlipperEngine flipperEngine)
         {
-            Flipper.FlipperEngine.Instance.serviceFactory = factory;
             this.itemsApi = itemsApi;
+            this.flipperEngine = flipperEngine;
         }
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             var allIds = await itemsApi.ItemsIdsGetAsync();
+            if(allIds == null)
+                throw new System.Exception("Could not load item ids from SkyItemService. Make sure it is reachable.");
             var tags = new string[] { "MINOS_RELIC", "DWARF_TURTLE_SHELMET", "QUICK_CLAW", "PET_ITEM_QUICK_CLAW", "PET_ITEM_TIER_BOOST" };
-            Flipper.FlipperEngine.Instance.ValuablePetItemIds = allIds.Where(a => tags.Contains(a.Key)).Select(a => (long)a.Value).ToHashSet();
-            await Flipper.FlipperEngine.Instance.ProcessPotentialFlipps(stoppingToken);
+            flipperEngine.ValuablePetItemIds = allIds.Where(a => tags.Contains(a.Key)).Select(a => (long)a.Value).ToHashSet();
+            await flipperEngine.ProcessPotentialFlipps(stoppingToken);
         }
     }
 }
