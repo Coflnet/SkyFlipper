@@ -27,9 +27,9 @@ namespace Coflnet.Sky.Commands.Shared
         private ILogger<GemPriceService> logger;
         private IConfiguration configuration;
 
-        public GemPriceService(IConfiguration config, IServiceScopeFactory scopeFactory, ILogger<GemPriceService> logger, IConfiguration configuration)
+        public GemPriceService(IServiceScopeFactory scopeFactory, ILogger<GemPriceService> logger, IConfiguration configuration)
         {
-            this.commandsClient = new RestSharp.RestClient(config["API_BASE_URL"]);
+            this.commandsClient = new RestSharp.RestClient(configuration["API_BASE_URL"]);
             this.scopeFactory = scopeFactory;
             this.logger = logger;
             this.configuration = configuration;
@@ -136,7 +136,7 @@ namespace Coflnet.Sky.Commands.Shared
 
         public int GetGemWrthFromLookup(List<NBTLookup> lookup)
         {
-            return lookup.Sum(l =>
+            return lookup?.Sum(l =>
             {
                 if (GemNames.TryGetValue((l.KeyId, l.Value), out string key))
                     if (Prices.TryGetValue(key, out int value))
@@ -147,7 +147,7 @@ namespace Coflnet.Sky.Commands.Shared
                         logger.LogDebug("Price for not found " + key);
                 
                 return 0;
-            });
+            }) ?? 0;
         }
     }
 }

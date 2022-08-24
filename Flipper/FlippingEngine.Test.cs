@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Coflnet.Sky.Core;
+using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
 using NUnit.Framework;
 
@@ -115,7 +116,8 @@ namespace Coflnet.Sky.Flipper
                 highest,
                 highest
             };
-            var result = await new FlipperEngine(null,null).GetWeightedMedian(new SaveAuction(), references);
+            var mockConfig = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string,string>(){{"API_BASE_URL","http://mock.url"}}).Build();
+            var result = await new FlipperEngine(null,new Commands.Shared.GemPriceService(null,null, mockConfig)).GetWeightedMedian(new SaveAuction(), references);
             // chooses the recent median
             Assert.AreEqual(newest.HighestBidAmount, result);
         }
