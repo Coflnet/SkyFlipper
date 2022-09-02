@@ -687,14 +687,12 @@ namespace Coflnet.Sky.Flipper
                 select = select.Where(a => a.NBTLookup.Where(n => n.KeyId == keyId && n.Value == val).Any());
             }
 
-            if (flatNbt.ContainsKey("color"))
-            {
-                var keyId = NBT.GetLookupKey("color");
-                var val = NBT.GetColor(flatNbt["color"]);
-                select = select.Where(a => a.NBTLookup.Where(n => n.KeyId == keyId && n.Value == val).Any());
 
-                if (flatNbt.ContainsKey("dye_item"))
-                    select = AddNBTSelect(select, flatNbt, "dye_item");
+            if (flatNbt.ContainsKey("color") || (IsArmour(auction)))
+            {
+                select = AddNBTSelect(select, flatNbt, "color");
+
+                select = AddNBTSelect(select, flatNbt, "dye_item");
             }
 
             foreach (var item in flatNbt)
@@ -730,6 +728,11 @@ namespace Coflnet.Sky.Flipper
                 .Include(a => a.NbtData)
                 .Take(limit)
                 .AsSplitQuery();
+        }
+
+        private static bool IsArmour(SaveAuction auction)
+        {
+            return auction.Tag.EndsWith("_CHESTPLATE") || auction.Tag.EndsWith("_BOOTS") || auction.Tag.EndsWith("_HELMET") || auction.Tag.EndsWith("_LEGGINGS");
         }
 
         private static IQueryable<SaveAuction> AddReforgeSelect(SaveAuction auction, bool reduced, IQueryable<SaveAuction> select)
