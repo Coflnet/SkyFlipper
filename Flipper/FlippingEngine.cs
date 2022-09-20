@@ -308,9 +308,6 @@ namespace Coflnet.Sky.Flipper
                 return null; // not a good flip
             }
 
-            // recheck with gemstone value removed (value doesn't have to be checked for all items)
-
-
             relevantAuctionIds[auction.UId] = relevantAuctions.Select(a => a.UId == 0 ? AuctionService.Instance.GetId(a.Uuid) : a.UId).ToList();
             if (relevantAuctionIds.Count > 10000)
             {
