@@ -74,8 +74,6 @@ namespace Coflnet.Sky.Flipper
 
         public FlipperEngine(IServiceScopeFactory factory, Commands.Shared.GemPriceService gemPriceService)
         {
-            // results are not relevant if older than 5 seconds
-            apiClient.Timeout = 5000;
             this.serviceFactory = factory;
             this.gemPriceService = gemPriceService;
         }
