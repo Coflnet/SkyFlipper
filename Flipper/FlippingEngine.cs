@@ -323,12 +323,13 @@ namespace Coflnet.Sky.Flipper
                 auction.Context["fsend"] = (DateTime.Now - auction.FindTime).ToString();
             additionalProps["refAge"] = ((int)(DateTime.UtcNow - referenceElement.Oldest).TotalDays).ToString();
 
+            var targetPrice = (int)(medianPrice * auction.Count / reductionDueToCount) + additionalWorth;
             var lowPrices = new LowPricedAuction()
             {
                 Auction = auction,
                 DailyVolume = (float)(relevantAuctions.Count / (DateTime.Now - referenceElement.Oldest).TotalDays),
                 Finder = LowPricedAuction.FinderType.FLIPPER,
-                TargetPrice = (int)medianPrice * auction.Count + additionalWorth,
+                TargetPrice = targetPrice,
                 AdditionalProps = additionalProps
             };
 
@@ -370,7 +371,7 @@ namespace Coflnet.Sky.Flipper
 
             var flip = new FlipInstance()
             {
-                MedianPrice = (int)medianPrice * auction.Count + additionalWorth,
+                MedianPrice = targetPrice,
                 Name = auction.ItemName,
                 Uuid = auction.Uuid,
                 LastKnownCost = (int)price * auction.Count,
@@ -420,7 +421,7 @@ namespace Coflnet.Sky.Flipper
             if (storeTime < TimeSpan.Zero)
                 storeTime = TimeSpan.FromSeconds(1);
             referenceElement.HitCount++;
-            if (storeTime < TimeSpan.FromHours(1) && referenceElement.HitCount > 1)
+            if (storeTime < TimeSpan.FromHours(1) && referenceElement.HitCount > 2)
             {
                 _ = Task.Run(async () =>
                 {
@@ -434,8 +435,6 @@ namespace Coflnet.Sky.Flipper
                         dev.Logger.Instance.Error(e, "refreshing cache for " + referenceElement?.Key);
                     }
                 }).ConfigureAwait(false);
-
-
             }
             else
                 // is set to fireand forget (will return imediately)
