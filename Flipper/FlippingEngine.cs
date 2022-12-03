@@ -293,7 +293,7 @@ namespace Coflnet.Sky.Flipper
             {
                 medianPrice = await GetWeightedMedian(auction, relevantAuctions);
             }
-            var reductionDueToCount = Math.Pow(1.02, referenceElement.HitCount);
+            var reductionDueToCount = Math.Pow(1.05, referenceElement.HitCount);
             int additionalWorth = await GetGemstoneWorth(auction);
             var recomendedBuyUnder = (medianPrice * 0.9 + additionalWorth) / reductionDueToCount;
             if (recomendedBuyUnder < 1_000_000)
@@ -413,32 +413,41 @@ namespace Coflnet.Sky.Flipper
 
         private async Task SaveHitOnFlip(RelevantElement referenceElement, SaveAuction auction)
         {
-
+            var storeLength = TimeSpan.FromHours(2);
             if (referenceElement.HitCount % 5 == 0)
                 Console.WriteLine($"hit {referenceElement.Key} {referenceElement.HitCount} times");
 
-            var storeTime = referenceElement.QueryTime - DateTime.Now + TimeSpan.FromHours(2);
+            var storeTime = referenceElement.QueryTime - DateTime.Now + storeLength;
             if (storeTime < TimeSpan.Zero)
                 storeTime = TimeSpan.FromSeconds(1);
             referenceElement.HitCount++;
-            if (storeTime < TimeSpan.FromHours(1) && referenceElement.HitCount > 2)
+            // is set to fireand forget (will return imediately)
+            await CacheService.Instance.SaveInRedis(referenceElement.Key, referenceElement, storeTime);
+            if (ShouldReferencesBeReloaded(referenceElement, storeLength, storeTime))
             {
-                _ = Task.Run(async () =>
-                {
-                    await Task.Delay(TimeSpan.FromSeconds(10));
-                    try
-                    {
-                        await GetAndCacheReferenceAuctions(auction, new FindTracking(), referenceElement.Key);
-                    }
-                    catch (Exception e)
-                    {
-                        dev.Logger.Instance.Error(e, "refreshing cache for " + referenceElement?.Key);
-                    }
-                }).ConfigureAwait(false);
+                ReloadReferencesIn10Seconds(referenceElement, auction);
             }
-            else
-                // is set to fireand forget (will return imediately)
-                await CacheService.Instance.SaveInRedis(referenceElement.Key, referenceElement, storeTime);
+        }
+
+        private static bool ShouldReferencesBeReloaded(RelevantElement referenceElement, TimeSpan storeLength, TimeSpan storeTime)
+        {
+            return storeTime < storeLength * 0.9 && referenceElement.HitCount > 3;
+        }
+
+        private void ReloadReferencesIn10Seconds(RelevantElement referenceElement, SaveAuction auction)
+        {
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(TimeSpan.FromSeconds(10));
+                try
+                {
+                    await GetAndCacheReferenceAuctions(auction, new FindTracking(), referenceElement.Key);
+                }
+                catch (Exception e)
+                {
+                    dev.Logger.Instance.Error(e, "refreshing cache for " + referenceElement?.Key);
+                }
+            }).ConfigureAwait(false);
         }
 
         private async Task<int> GetGemstoneWorth(SaveAuction auction)
