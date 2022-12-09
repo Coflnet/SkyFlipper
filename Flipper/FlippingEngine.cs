@@ -108,6 +108,12 @@ namespace Coflnet.Sky.Flipper
                 {
                     var res = await NewAuction(auction, lpp, scope);
                 }
+                catch (System.OutOfMemoryException)
+                {
+                    Console.WriteLine("Out of memory");
+                    // stop program
+                    Environment.Exit(69);
+                }
                 catch (Exception e)
                 {
                     Console.WriteLine("testing auction" + e);
@@ -502,6 +508,8 @@ namespace Coflnet.Sky.Flipper
             // shifted out of the critical path
             if (referenceAuctions.references.Count > 1)
             {
+                if (referenceAuctions.references.Any(a => a.Tag != auction.Tag))
+                    throw new CoflnetException("tag_mismatch", $"tag mismatch {referenceAuctions.references.First().Tag} != {auction.Tag}");
                 await CacheService.Instance.SaveInRedis<RelevantElement>(key, referenceAuctions, TimeSpan.FromHours(2));
             }
             tracking.Tag("cache", "false");
