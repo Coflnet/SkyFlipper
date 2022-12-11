@@ -284,7 +284,7 @@ namespace Coflnet.Sky.Flipper
             var relevantAuctions = referenceElement.references;
 
             long medianPrice = 0;
-            if (relevantAuctions.Count < 2)
+            if (relevantAuctions.Count < 3)
             {
                 Console.WriteLine($"Not enough relevant auctions for {referenceElement.Key} {auction.Uuid} ({ExtractRelevantEnchants(auction).Count} {relevantAuctions.Count})");
 
