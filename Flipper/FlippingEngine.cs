@@ -568,6 +568,9 @@ namespace Coflnet.Sky.Flipper
             if (relevantAuctions.Count > 1)
                 relevantAuctions = relevantAuctions.GroupBy(a => a.SellerId).Select(a => a.First()).ToList();
 
+            // filter out auctions that are not master crypts sols
+            if (!auction.FlatenedNBT.Any(f => f.Key.StartsWith("MASTER_CRYPT")))
+                relevantAuctions = relevantAuctions.Where(a => a.FlatenedNBT.Any(f => f.Key.StartsWith("MASTER_CRYPT"))).ToList();
 
             return new RelevantElement()
             {
