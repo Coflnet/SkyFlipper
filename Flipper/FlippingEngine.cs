@@ -11,7 +11,7 @@ using Coflnet.Sky.Core;
 using MessagePack;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Newtonsoft.Json;
+using Coflnet.Sky.PlayerName.Client.Api;
 using OpenTracing.Propagation;
 
 namespace Coflnet.Sky.Flipper
@@ -34,6 +34,7 @@ namespace Coflnet.Sky.Flipper
 
         internal IServiceScopeFactory serviceFactory;
         private Commands.Shared.GemPriceService gemPriceService;
+        private IPlayerNameApi playerNameApi;
 
         Prometheus.Counter foundFlipCount = Prometheus.Metrics
                     .CreateCounter("flips_found", "Number of flips found");
@@ -347,7 +348,7 @@ namespace Coflnet.Sky.Flipper
             await SaveHitOnFlip(referenceElement, auction);
 
             var itemTag = auction.Tag;
-            var name = PlayerSearch.Instance.GetNameWithCacheAsync(auction.AuctioneerId);
+            var name = playerNameApi.PlayerNameNameUuidGetAsync(auction.AuctioneerId);
             var filters = new Dictionary<string, string>();
             var ulti = auction.Enchantments.Where(e => UltimateEnchants.ContainsKey(e.Type)).FirstOrDefault();
             if (ulti != null)
@@ -387,7 +388,7 @@ namespace Coflnet.Sky.Flipper
                 UId = auction.UId,
                 Rarity = auction.Tier,
                 Interesting = PropertiesSelector.GetProperties(auction).OrderByDescending(a => a.Rating).Select(a => a.Value).ToList(),
-                SellerName = await name,
+                SellerName = (await name).Trim('"'),
                 LowestBin = lowestBin?.FirstOrDefault()?.Price + additionalWorth,
                 SecondLowestBin = lowestBin?.Count >= 2 ? lowestBin[1].Price : 0L,
                 Auction = auction

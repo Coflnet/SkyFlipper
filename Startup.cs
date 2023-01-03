@@ -9,6 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Models;
 using Prometheus;
+using Coflnet.Sky.PlayerName.Client.Api;
 
 namespace Coflnet.Sky.Flipper
 {
@@ -30,7 +31,7 @@ namespace Coflnet.Sky.Flipper
             {
                 c.SwaggerDoc("v1", new OpenApiInfo { Title = "SkyFlipper", Version = "v1" });
             });
-            services.AddJaeger();
+            services.AddJaeger(Configuration);
 
             services.AddDbContext<HypixelContext>(
                 dbContextOptions => dbContextOptions
@@ -52,6 +53,11 @@ namespace Coflnet.Sky.Flipper
             services.AddSingleton<GemPriceService>();
             services.AddSingleton<FlipperEngine>();
             services.AddHostedService<GemPriceService>(di => di.GetRequiredService<GemPriceService>());
+            services.AddSingleton<IPlayerNameApi, PlayerNameApi>(context =>
+            {
+                var config = context.GetRequiredService<IConfiguration>();
+                return new PlayerName.Client.Api.PlayerNameApi(config["PLAYERNAME_BASE_URL"]);
+            });
             NBT.Instance = new NoWriteNbt();
         }
 
