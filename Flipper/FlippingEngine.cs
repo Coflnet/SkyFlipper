@@ -837,6 +837,8 @@ namespace Coflnet.Sky.Flipper
             var sb = new StringBuilder(auction.ItemName);
             if (sb[6] == ']')
                 sb[5] = '_';
+            else if(sb[8] == ']')
+                sb[7] = '_'; // [Lvl 10_]
             else
                 sb[6] = '_';
             select = select.Where(a => EF.Functions.Like(a.ItemName, sb.ToString()));
