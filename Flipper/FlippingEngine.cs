@@ -834,15 +834,22 @@ namespace Coflnet.Sky.Flipper
 
         private static IQueryable<SaveAuction> AddPetLvlSelect(SaveAuction auction, IQueryable<SaveAuction> select)
         {
+            string value = GetPetLevelSelectVal(auction);
+            select = select.Where(a => EF.Functions.Like(a.ItemName, value));
+            return select;
+        }
+
+        public static string GetPetLevelSelectVal(SaveAuction auction)
+        {
             var sb = new StringBuilder(auction.ItemName);
             if (sb[6] == ']')
                 sb[5] = '_';
-            else if(sb[8] == ']')
+            else if (sb[8] == ']')
                 sb[7] = '_'; // [Lvl 10_]
             else
                 sb[6] = '_';
-            select = select.Where(a => EF.Functions.Like(a.ItemName, sb.ToString()));
-            return select;
+            var value = sb.ToString();
+            return value;
         }
 
         public static IQueryable<SaveAuction> AddEnchantmentSubselect(SaveAuction auction, List<Enchantment> highLvlEnchantList, IQueryable<SaveAuction> select, byte ultiLevel, Enchantment.EnchantmentType ultiType, FindTracking track, bool reduced = false)

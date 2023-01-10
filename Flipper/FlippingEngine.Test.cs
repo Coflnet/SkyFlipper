@@ -104,10 +104,10 @@ namespace Coflnet.Sky.Flipper
         [Test]
         public async Task GetWeightedMedian()
         {
-            var low = new SaveAuction(){ HighestBidAmount = 3, End = DateTime.Now - TimeSpan.FromSeconds(5)};
-            var target = new SaveAuction(){ HighestBidAmount = 7, End = DateTime.Now - TimeSpan.FromSeconds(6)};
-            var highest = new SaveAuction(){ HighestBidAmount = 11, End = DateTime.Now - TimeSpan.FromSeconds(7)};
-            var newest = new SaveAuction(){ HighestBidAmount = 4, End = DateTime.Now};
+            var low = new SaveAuction() { HighestBidAmount = 3, End = DateTime.Now - TimeSpan.FromSeconds(5) };
+            var target = new SaveAuction() { HighestBidAmount = 7, End = DateTime.Now - TimeSpan.FromSeconds(6) };
+            var highest = new SaveAuction() { HighestBidAmount = 11, End = DateTime.Now - TimeSpan.FromSeconds(7) };
+            var newest = new SaveAuction() { HighestBidAmount = 4, End = DateTime.Now };
             var references = new List<SaveAuction>()
             {
                 low,
@@ -116,8 +116,8 @@ namespace Coflnet.Sky.Flipper
                 highest,
                 highest
             };
-            var mockConfig = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string,string>(){{"API_BASE_URL","http://mock.url"}}).Build();
-            var result = await new FlipperEngine(null,new Commands.Shared.GemPriceService(null,null, mockConfig)).GetWeightedMedian(new SaveAuction(), references);
+            var mockConfig = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string>() { { "API_BASE_URL", "http://mock.url" } }).Build();
+            var result = await new FlipperEngine(null, new Commands.Shared.GemPriceService(null, null, mockConfig)).GetWeightedMedian(new SaveAuction(), references);
             // chooses the recent median
             Assert.AreEqual(newest.HighestBidAmount, result);
         }
@@ -128,7 +128,16 @@ namespace Coflnet.Sky.Flipper
         [TestCase("PET_ITEM_TIER_BOOST", 300000, true)]
         public void PetItemSelects(string item, long exp, bool target)
         {
-            Assert.AreEqual(target, FlipperEngine.ShouldPetItemMatch(new() { { "heldItem", item }, {"exp", exp.ToString()} }));
+            Assert.AreEqual(target, FlipperEngine.ShouldPetItemMatch(new() { { "heldItem", item }, { "exp", exp.ToString() } }));
+        }
+
+        [Test]
+        [TestCase("[Lvl 143] Test", "[Lvl 14_] Test")]
+        [TestCase("[Lvl 14] Test", "[Lvl 1_] Test")]
+        [TestCase("[Lvl 1] Test", "[Lvl _] Test")]
+        public void TestPetLevelComp(string full, string target)
+        {
+            Assert.AreEqual(target, FlipperEngine.GetPetLevelSelectVal(new() { ItemName = full }));
         }
 
     }
