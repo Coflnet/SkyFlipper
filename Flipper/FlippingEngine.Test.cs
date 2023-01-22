@@ -117,7 +117,7 @@ namespace Coflnet.Sky.Flipper
                 highest
             };
             var mockConfig = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string>() { { "API_BASE_URL", "http://mock.url" } }).Build();
-            var result = await new FlipperEngine(null, new Commands.Shared.GemPriceService(null, null, mockConfig)).GetWeightedMedian(new SaveAuction(), references);
+            var result = await new FlipperEngine(null, new Commands.Shared.GemPriceService(null, null, mockConfig), null).GetWeightedMedian(new SaveAuction(), references);
             // chooses the recent median
             Assert.AreEqual(newest.HighestBidAmount, result);
         }

@@ -73,10 +73,11 @@ namespace Coflnet.Sky.Flipper
             }
         }
 
-        public FlipperEngine(IServiceScopeFactory factory, Commands.Shared.GemPriceService gemPriceService)
+        public FlipperEngine(IServiceScopeFactory factory, Commands.Shared.GemPriceService gemPriceService, IPlayerNameApi playerNameApi)
         {
             this.serviceFactory = factory;
             this.gemPriceService = gemPriceService;
+            this.playerNameApi = playerNameApi;
         }
 
         private RestSharp.RestClient apiClient = new RestSharp.RestClient(SimplerConfig.Config.Instance["api_base_url"]);
@@ -296,10 +297,15 @@ namespace Coflnet.Sky.Flipper
                  if (lookupPrices?.Prices.Count > 0)
                      medianPrice = (long)(lookupPrices?.Prices?.Average(p => p.Avg * 0.8 + p.Min * 0.2) ?? 0);*/
             }
-            else
+            var binRefcount = relevantAuctions.Count(a => a.Bin);
+            if (relevantAuctions.Count > binRefcount * 2)
             {
-                medianPrice = await GetWeightedMedian(auction, relevantAuctions);
+                Console.WriteLine($"Too many auctions that are not BIN {auction.Uuid} bin count {binRefcount} total references {relevantAuctions.Count})");
+                // too many auctions that are not BIN
+                return null;
             }
+            medianPrice = await GetWeightedMedian(auction, relevantAuctions);
+
             var reductionDueToCount = Math.Pow(1.05, referenceElement.HitCount);
             int additionalWorth = await GetGemstoneWorth(auction);
             var recomendedBuyUnder = (medianPrice * 0.9 + additionalWorth) / reductionDueToCount;
