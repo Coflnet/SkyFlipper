@@ -690,6 +690,8 @@ namespace Coflnet.Sky.Flipper
                 select = AddNBTSelect(select, flatNbt, "DRAGON");
             if (flatNbt.ContainsKey("TIDAL"))
                 select = AddNBTSelect(select, flatNbt, "TIDAL");
+            if (flatNbt.ContainsKey("ability_scroll"))
+                select = AddNBTSelect(select, flatNbt, "ability_scroll");
 
             if (auction.Tag.Contains("_DRILL"))
             {
