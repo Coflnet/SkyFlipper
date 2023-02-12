@@ -34,13 +34,28 @@ namespace Coflnet.Sky.Flipper.Controllers
             var auction = await AuctionService.Instance.GetAuctionAsync(uuid,
                 auctions => auctions
                 .Include(a => a.NbtData)
-                .Include(a=>a.NBTLookup)
+                .Include(a => a.NBTLookup)
                 .Include(a => a.Enchantments));
             _logger.LogInformation(Newtonsoft.Json.JsonConvert.SerializeObject(auction));
-            if(auction == null)
+            if (auction == null)
                 return new List<SaveAuction>();
 
             return (await flipperEngine.GetRelevantAuctionsCache(auction, new FindTracking())).references;
+
+        }
+        [HttpGet]
+        [Route("/flip/{uuid}/cache")]
+        public async Task<object> GetCacheInfo(string uuid)
+        {
+            var auction = await AuctionService.Instance.GetAuctionAsync(uuid,
+                auctions => auctions
+                .Include(a => a.NbtData)
+                .Include(a => a.NBTLookup)
+                .Include(a => a.Enchantments));
+            if (auction == null)
+                return new List<SaveAuction>();
+            var cached = (await flipperEngine.GetRelevantAuctionsCache(auction, new FindTracking()));
+            return new { cached.HitCount, cached.Key, cached.QueryTime, refCount = cached.references.Count() };
 
         }
 
