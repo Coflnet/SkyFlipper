@@ -59,6 +59,21 @@ namespace Coflnet.Sky.Flipper.Controllers
 
         }
 
+        [HttpDelete]
+        [Route("/flip/{uuid}")]
+        public async Task<IActionResult> Delete(string uuid)
+        {
+            var auction = await AuctionService.Instance.GetAuctionAsync(uuid,
+                auctions => auctions
+                .Include(a => a.NbtData)
+                .Include(a => a.NBTLookup)
+                .Include(a => a.Enchantments));
+            if (auction == null)
+                return NotFound();
+            await flipperEngine.VoidReferences(auction);
+            return Ok();
+        }
+
         [HttpGet]
         [Route("/status")]
         public IActionResult Status(string uuid)

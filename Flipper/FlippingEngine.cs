@@ -478,15 +478,7 @@ namespace Coflnet.Sky.Flipper
         /// <returns></returns>
         public async Task<RelevantElement> GetRelevantAuctionsCache(SaveAuction auction, FindTracking tracking)
         {
-            var key = $"o{auction.Tag}{auction.ItemName}{auction.Tier}{auction.Count}";
-            if (relevantReforges.Contains(auction.Reforge))
-                key += auction.Reforge;
-            var relevant = ExtractRelevantEnchants(auction);
-            if (relevant.Count() == 0)
-                key += String.Concat(auction.Enchantments.Select(a => $"{a.Type}{a.Level}"));
-            else
-                key += String.Concat(relevant.Select(a => $"{a.Type}{a.Level}"));
-            key += String.Concat(auction.FlatenedNBT.Where(d => !ignoredNbt.Contains(d.Key)));
+            string key = GetCacheKey(auction);
             tracking.Tag("key", key);
             try
             {
@@ -504,6 +496,20 @@ namespace Coflnet.Sky.Flipper
             }
 
             return await GetAndCacheReferenceAuctions(auction, tracking, key);
+        }
+
+        private static string GetCacheKey(SaveAuction auction)
+        {
+            var key = $"o{auction.Tag}{auction.ItemName}{auction.Tier}{auction.Count}";
+            if (relevantReforges.Contains(auction.Reforge))
+                key += auction.Reforge;
+            var relevant = ExtractRelevantEnchants(auction);
+            if (relevant.Count() == 0)
+                key += String.Concat(auction.Enchantments.Select(a => $"{a.Type}{a.Level}"));
+            else
+                key += String.Concat(relevant.Select(a => $"{a.Type}{a.Level}"));
+            key += String.Concat(auction.FlatenedNBT.Where(d => !ignoredNbt.Contains(d.Key)));
+            return key;
         }
 
         private async Task<RelevantElement> GetAndCacheReferenceAuctions(SaveAuction auction, FindTracking tracking, string key)
@@ -928,6 +934,12 @@ namespace Coflnet.Sky.Flipper
         private static HashSet<Enchantment.EnchantmentType> GetMinLvl(List<Enchantment> highLvlEnchantList, int lvl)
         {
             return highLvlEnchantList.Where(e => e.Level == lvl).Select(e => e.Type).ToHashSet();
+        }
+
+        internal async Task VoidReferences(SaveAuction auction)
+        {
+            var key = GetCacheKey(auction);
+            await CacheService.Instance.DeleteInRedis(key);
         }
 
         private static ProducerConfig producerConfig = new ProducerConfig
