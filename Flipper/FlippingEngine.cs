@@ -551,8 +551,8 @@ namespace Coflnet.Sky.Flipper
             {
                 // to few auctions in last hour, try a whole day
                 oldest = DateTime.Now - TimeSpan.FromDays(1.5);
-                relevantAuctions = await GetSelect(auction, context, clearedName, itemId, youngest, ulti, relevantEnchants, oldest, tracking, 90)
-                .ToListAsync();
+                relevantAuctions = relevantAuctions.Concat(await GetSelect(auction, context, clearedName, itemId, youngest, ulti, relevantEnchants, oldest, tracking, 90)
+                .ToListAsync()).ToList();
 
                 if (relevantAuctions.Count < 50 && PotetialFlipps.Count < 2000)
                 {
