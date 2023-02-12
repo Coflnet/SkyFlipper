@@ -351,7 +351,7 @@ namespace Coflnet.Sky.Flipper
                 Key = auction.Uuid,
                 Value = lowPrices
             });
-            await SaveHitOnFlip(referenceElement, auction);
+            await SaveHitOnFlip(referenceElement, auction, recomendedBuyUnder);
 
             var itemTag = auction.Tag;
             var name = playerNameApi.PlayerNameNameUuidGetAsync(auction.AuctioneerId);
@@ -424,11 +424,11 @@ namespace Coflnet.Sky.Flipper
             return Math.Min(fullTime, shortTerm);
         }
 
-        private async Task SaveHitOnFlip(RelevantElement referenceElement, SaveAuction auction)
+        private async Task SaveHitOnFlip(RelevantElement referenceElement, SaveAuction auction, double recomendedBuyUnder)
         {
             var storeLength = TimeSpan.FromHours(2);
             if (referenceElement.HitCount % 5 == 0)
-                Console.WriteLine($"hit {referenceElement.Key} {referenceElement.HitCount} times");
+                Console.WriteLine($"hit {referenceElement.Key} {referenceElement.HitCount} times at price {recomendedBuyUnder}");
 
             var storeTime = referenceElement.QueryTime - DateTime.Now + storeLength;
             if (storeTime < TimeSpan.Zero)
