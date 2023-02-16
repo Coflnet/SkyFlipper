@@ -542,7 +542,7 @@ namespace Coflnet.Sky.Flipper
             var highLvlEnchantList = relevantEnchants.Where(e => !UltimateEnchants.ContainsKey(e.Type)).Select(a => a.Type).ToList();
             var oldest = DateTime.Now - TimeSpan.FromHours(2);
 
-            IQueryable<SaveAuction> select = GetSelect(auction, context, clearedName, itemId, youngest, ulti, relevantEnchants, oldest, tracking, 10);
+            IQueryable<SaveAuction> select = GetSelect(auction, context, clearedName, itemId, youngest, ulti, relevantEnchants, oldest, tracking, 30);
 
             var relevantAuctions = await select
                 .ToListAsync();
@@ -570,6 +570,8 @@ namespace Coflnet.Sky.Flipper
                     }
                 }
             }
+            else if (relevantAuctions.Count >= 30)
+                await AddVeryRecentReferencesForHighVolume(auction, context, tracking, clearedName, itemId, youngest, relevantEnchants, ulti, relevantAuctions);
 
             /* got replaced with average overall lookup
             if (relevantAuctions.Count < 3 && PotetialFlipps.Count < 100)
@@ -590,6 +592,13 @@ namespace Coflnet.Sky.Flipper
                 references = relevantAuctions,
                 Oldest = oldest
             };
+        }
+
+        private async Task AddVeryRecentReferencesForHighVolume(SaveAuction auction, HypixelContext context, FindTracking tracking, string clearedName, int itemId, DateTime youngest, List<Enchantment> relevantEnchants, Enchantment ulti, List<SaveAuction> relevantAuctions)
+        {
+            relevantAuctions.AddRange(
+                                await GetSelect(auction, context, clearedName, itemId, youngest, ulti, relevantEnchants, DateTime.Now - TimeSpan.FromMinutes(15), tracking, 20, true)
+                                        .ToListAsync());
         }
 
         public static List<Enchantment> ExtractRelevantEnchants(SaveAuction auction)
