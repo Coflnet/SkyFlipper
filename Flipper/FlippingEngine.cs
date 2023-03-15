@@ -411,7 +411,7 @@ namespace Coflnet.Sky.Flipper
         {
             var auctions = (await Task.WhenAll(relevantAuctions
                                 //.OrderByDescending(a => a.HighestBidAmount)
-                                .Select(async a => new { a, value = a.HighestBidAmount / (a.Count == 0 ? 1 : a.Count) / (a.Count == auction.Count ? 1 : 2) - await GetGemstoneWorth(a) })))
+                                .Select(async a => new { a, value = a.HighestBidAmount / (a.Count == 0 ? 1 : a.Count) / (a.Count == auction.Count ? 1 : 3) - await GetGemstoneWorth(a) })))
                                 .ToList();
             var fullTime = auctions.Select(a => a.value).OrderByDescending(a => a)
                                 .Skip(relevantAuctions.Count / 2)
