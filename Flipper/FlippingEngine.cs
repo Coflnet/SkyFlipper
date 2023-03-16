@@ -270,7 +270,7 @@ namespace Coflnet.Sky.Flipper
         public async System.Threading.Tasks.Task<FlipInstance> NewAuction(SaveAuction auction, IProducer<string, LowPricedAuction> lpp, OpenTracing.IScope span)
         {
             // blacklist
-            if (auction.ItemName == "null" || auction.Tag == "ATTRIBUTE_SHARD")
+            if (auction.ItemName == "null" || auction.Tag == "ATTRIBUTE_SHARD" || auction.Tag.Contains(":"))
                 return null;
 
             var price = (auction.HighestBidAmount == 0 ? auction.StartingBid : (auction.HighestBidAmount * 1.1)) / auction.Count;
