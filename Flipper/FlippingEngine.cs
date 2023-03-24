@@ -58,6 +58,23 @@ namespace Coflnet.Sky.Flipper
 
         public HashSet<long> ValuablePetItemIds = new();
 
+        private static readonly Dictionary<string, short> ShardAttributes = new(){
+            {"mana_pool", 1},
+            {"breeze", 1},
+            {"speed", 2},
+            {"life_regeneration", 2}, // especially valuable in combination with mana_pool
+            {"fishing_experience", 2},
+            {"ignition", 2},
+            {"blazing_fortune", 2},
+            {"double_hook", 3},
+            {"mana_regeneration", 2},
+            {"mending", 3},
+            {"dominance", 3},
+            {"magic_find", 2}
+            //{"lifeline", 3} to low volume
+            // life recovery 3
+        };
+
         static FlipperEngine()
         {
             foreach (var item in Enum.GetValues(typeof(Enchantment.EnchantmentType)).Cast<Enchantment.EnchantmentType>())
@@ -707,6 +724,11 @@ namespace Coflnet.Sky.Flipper
                 select = AddNBTSelect(select, flatNbt, "TIDAL");
             if (flatNbt.ContainsKey("ability_scroll"))
                 select = AddNBTSelect(select, flatNbt, "ability_scroll");
+
+            foreach (var item in ShardAttributes)
+            {
+                select = AddNBTSelect(select, flatNbt, item.Key);
+            }
 
             if (auction.Tag.Contains("_DRILL"))
             {
