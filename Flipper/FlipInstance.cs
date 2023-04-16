@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using System.Runtime.Serialization;
 using Coflnet.Sky.Core;
-using Microsoft.EntityFrameworkCore;
 
 namespace Coflnet.Sky.Flipper
 {
