@@ -12,6 +12,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Coflnet.Sky.PlayerName.Client.Api;
 using OpenTracing.Propagation;
+using Microsoft.Extensions.Configuration;
+using System.Diagnostics;
 
 namespace Coflnet.Sky.Flipper
 {
@@ -34,6 +36,9 @@ namespace Coflnet.Sky.Flipper
         internal IServiceScopeFactory serviceFactory;
         private Commands.Shared.GemPriceService gemPriceService;
         private IPlayerNameApi playerNameApi;
+        private Kafka.KafkaCreator kafkaCreator;
+        private IConfiguration config;
+        private ActivitySource activitySource;
 
         Prometheus.Counter foundFlipCount = Prometheus.Metrics
                     .CreateCounter("flips_found", "Number of flips found");
@@ -90,11 +95,14 @@ namespace Coflnet.Sky.Flipper
             }
         }
 
-        public FlipperEngine(IServiceScopeFactory factory, Commands.Shared.GemPriceService gemPriceService, IPlayerNameApi playerNameApi)
+        public FlipperEngine(IServiceScopeFactory factory, Commands.Shared.GemPriceService gemPriceService, IPlayerNameApi playerNameApi, Kafka.KafkaCreator kafkaCreator, IConfiguration config, ActivitySource activitySource)
         {
             this.serviceFactory = factory;
             this.gemPriceService = gemPriceService;
             this.playerNameApi = playerNameApi;
+            this.kafkaCreator = kafkaCreator;
+            this.config = config;
+            this.activitySource = activitySource;
         }
 
         private RestSharp.RestClient apiClient = new RestSharp.RestClient(SimplerConfig.Config.Instance["api_base_url"]);
@@ -120,12 +128,11 @@ namespace Coflnet.Sky.Flipper
 
             foreach (var auction in toCheck)
             {
-                var span = OpenTracing.Util.GlobalTracer.Instance.BuildSpan("AuctionFlip")
-                                           .WithTag("uuid", auction.Uuid);
-                using var scope = span.StartActive();
+                using var span = activitySource.CreateActivity("AuctionFlip", ActivityKind.Server)?
+                                           .SetTag("uuid", auction.Uuid);
                 try
                 {
-                    var res = await NewAuction(auction, lpp, scope);
+                    var res = await NewAuction(auction, lpp, span);
                 }
                 catch (System.OutOfMemoryException)
                 {
@@ -145,98 +152,51 @@ namespace Coflnet.Sky.Flipper
         {
             try
             {
-                var conf = new ConsumerConfig
+                Console.WriteLine("starting worker");
+                var taskFactory = new TaskFactory(new LimitedConcurrencyLevelTaskScheduler(2));
+                //using (var c = new ConsumerBuilder<Ignore, SaveAuction>(conf).SetValueDeserializer(SerializerFactory.GetDeserializer<SaveAuction>()).Build())
+                using (var lpp = kafkaCreator.BuildProducer<string, LowPricedAuction>())
+                using (var p = kafkaCreator.BuildProducer<string, FlipInstance>())
                 {
-                    GroupId = "flipper-processor",
-                    BootstrapServers = KafkaHost,
-                    // Note: The AutoOffsetReset property determines the start offset in the event
-                    // there are not yet any committed offsets for the consumer group for the
-                    // topic/partitions of interest. By default, offsets are committed
-                    // automatically, so in this example, consumption will only start from the
-                    // earliest message in the topic 'my-topic' the first time you run the program.
-                    AutoOffsetReset = AutoOffsetReset.Earliest,
-                    AutoCommitIntervalMs = 1500
-                };
-
-                using (var c = new ConsumerBuilder<Ignore, SaveAuction>(conf).SetValueDeserializer(SerializerFactory.GetDeserializer<SaveAuction>()).Build())
-                using (var lpp = new ProducerBuilder<string, LowPricedAuction>(producerConfig).SetValueSerializer(SerializerFactory.GetSerializer<LowPricedAuction>()).Build())
-                using (var p = new ProducerBuilder<string, FlipInstance>(producerConfig).SetValueSerializer(SerializerFactory.GetSerializer<FlipInstance>()).Build())
-                {
-                    c.Subscribe(NewAuctionTopic);
-                    try
+                    await Kafka.KafkaConsumer.Consume<SaveAuction>(config, NewAuctionTopic, async auction =>
                     {
-                        await Task.Yield();
-                        Console.WriteLine("starting worker");
-                        var taskFactory = new TaskFactory(new LimitedConcurrencyLevelTaskScheduler(2));
-                        while (!cancleToken.IsCancellationRequested)
+
+                        LastLiveProbe = DateTime.Now;
+                        // makes no sense to check old auctions
+                        if (auction.Start < DateTime.Now - TimeSpan.FromMinutes(5) || !auction.Bin)
+                            return;
+                        using var span = activitySource.CreateActivity("AuctionFlip", ActivityKind.Server)
+                                           ?.SetTag("uuid", auction.Uuid);
+                        try
                         {
-                            try
+                            var findingTask = taskFactory.StartNew(async () =>
                             {
-                                LastLiveProbe = DateTime.Now;
-                                var cr = c.Consume(cancleToken);
-                                if (cr == null)
-                                    continue;
-
-
-                                var auction = cr.Message.Value;
-                                // makes no sense to check old auctions
-                                if (auction.Start < DateTime.Now - TimeSpan.FromMinutes(5) || !auction.Bin)
-                                    continue;
-
-                                var tracer = OpenTracing.Util.GlobalTracer.Instance;
-                                OpenTracing.ISpanContext parent;
-                                if (cr.Message.Value.TraceContext == null)
-                                    parent = tracer.BuildSpan("mock").StartActive().Span.Context;
-                                else
-                                    parent = tracer.Extract(BuiltinFormats.TextMap, cr.Message.Value.TraceContext);
-
-                                var receiveSpan = tracer.BuildSpan("ReceiveAuction")
-                                        .AsChildOf(parent).Start();
-                                if (cr.Message.Value.Context != null)
-                                    cr.Message.Value.Context["frec"] = (DateTime.Now - cr.Message.Value.FindTime).ToString();
-
-                                var findingTask = taskFactory.StartNew(async () =>
+                                try
                                 {
-                                    receiveSpan.Finish();
-
-                                    var span = tracer.BuildSpan("SearchFlip")
-                                            .WithTag("uuid", cr.Message.Value.Uuid);
-                                    using var scope = span.StartActive();
-                                    try
-                                    {
-                                        await throttler.WaitAsync();
-                                        await ProcessSingleFlip(p, cr, lpp, scope);
-                                    }
-                                    catch (Exception e)
-                                    {
-                                        dev.Logger.Instance.Error(e, "flip search");
-                                        scope.Span.SetTag("error", "true").Log(e.Message).Log(e.StackTrace);
-                                    }
-                                    finally
-                                    {
-                                        throttler.Release();
-                                    }
-                                });
-
-                                //c.Commit(new TopicPartitionOffset[] { cr.TopicPartitionOffset });
-                                if (cr.Offset.Value % 500 == 0)
-                                {
-                                    Console.WriteLine($"consumed new-auction {cr.Offset.Value}");
-                                    if (cr.Offset.Value % 2000 == 0)
-                                        System.GC.Collect();
+                                    await throttler.WaitAsync();
+                                    await ProcessSingleFlip(p, auction, lpp, span);
                                 }
-                            }
-                            catch (ConsumeException e)
-                            {
-                                dev.Logger.Instance.Error(e, "flipper process potential ");
-                            }
+                                catch (Exception e)
+                                {
+                                    dev.Logger.Instance.Error(e, "flip search");
+                                }
+                                finally
+                                {
+                                    throttler.Release();
+                                }
+                            });
                         }
-                    }
-                    catch (OperationCanceledException)
-                    {
-                        // Ensure the consumer leaves the group cleanly and final offsets are committed.
-                        c.Close();
-                    }
+                        catch (System.OutOfMemoryException)
+                        {
+                            Console.WriteLine("Out of memory");
+                            // stop program
+                            Environment.Exit(69);
+                        }
+                        catch (Exception e)
+                        {
+                            Console.WriteLine("testing auction" + e);
+                        }
+                    }, cancleToken, "sky-flipper");
                 }
 
             }
@@ -246,14 +206,12 @@ namespace Coflnet.Sky.Flipper
             }
         }
 
-        private async Task ProcessSingleFlip(IProducer<string, FlipInstance> p, ConsumeResult<Ignore, SaveAuction> cr, IProducer<string, LowPricedAuction> lpp, OpenTracing.IScope span)
+        private async Task ProcessSingleFlip(IProducer<string, FlipInstance> p, SaveAuction auction, IProducer<string, LowPricedAuction> lpp, Activity span)
         {
-            receiveTime.Observe((DateTime.Now - cr.Message.Value.FindTime).TotalSeconds);
+            receiveTime.Observe((DateTime.Now - auction.FindTime).TotalSeconds);
 
             var startTime = DateTime.Now;
             FlipInstance flip = null;
-
-            var auction = cr.Message.Value;
 
             flip = await NewAuction(auction, lpp, span);
 
@@ -284,7 +242,7 @@ namespace Coflnet.Sky.Flipper
 
         public ConcurrentDictionary<long, List<long>> relevantAuctionIds = new ConcurrentDictionary<long, List<long>>();
 
-        public async System.Threading.Tasks.Task<FlipInstance> NewAuction(SaveAuction auction, IProducer<string, LowPricedAuction> lpp, OpenTracing.IScope span)
+        public async System.Threading.Tasks.Task<FlipInstance> NewAuction(SaveAuction auction, IProducer<string, LowPricedAuction> lpp, Activity span)
         {
             // blacklist
             if (auction.ItemName == "null" || auction.Tag == "ATTRIBUTE_SHARD" || auction.Tag.Contains(":"))
@@ -298,7 +256,7 @@ namespace Coflnet.Sky.Flipper
             if (auction.NBTLookup == null || auction.NBTLookup.Count() == 0)
                 auction.NBTLookup = NBT.CreateLookup(auction);
 
-            var trackingContext = new FindTracking() { Span = span.Span };
+            var trackingContext = new FindTracking() { Span = span };
             var referenceElement = await GetRelevantAuctionsCache(auction, trackingContext);
             var relevantAuctions = referenceElement.references;
 
@@ -395,7 +353,7 @@ namespace Coflnet.Sky.Flipper
             // prevent price manipulation
             if (lowestBin?.FirstOrDefault()?.Price > medianPrice)
             {
-                span.Span.SetTag("error", true).Log("lbin higher than median " + lowestBin?.FirstOrDefault()?.Uuid);
+                span?.SetTag("error", true).SetTag("reason", "lbin higher than median " + lowestBin?.FirstOrDefault()?.Uuid);
                 return null;
             }
 
@@ -997,7 +955,7 @@ namespace Coflnet.Sky.Flipper
 
     public class FindTracking
     {
-        public OpenTracing.ISpan Span;
+        public Activity Span;
         public Dictionary<string, string> Context = new Dictionary<string, string>();
 
         internal void Tag(string key, string value)

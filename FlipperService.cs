@@ -11,10 +11,12 @@ namespace Coflnet.Sky.Flipper
     {
         IItemsApi itemsApi;
         private FlipperEngine flipperEngine;
-        public FlipperService(IItemsApi itemsApi, FlipperEngine flipperEngine)
+        private Kafka.KafkaCreator kafkaCreator;
+        public FlipperService(IItemsApi itemsApi, FlipperEngine flipperEngine, Kafka.KafkaCreator kafkaCreator)
         {
             this.itemsApi = itemsApi;
             this.flipperEngine = flipperEngine;
+            this.kafkaCreator = kafkaCreator;
         }
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
@@ -23,6 +25,8 @@ namespace Coflnet.Sky.Flipper
                 throw new System.Exception("Could not load item ids from SkyItemService. Make sure it is reachable.");
             var tags = new string[] { "MINOS_RELIC", "DWARF_TURTLE_SHELMET", "QUICK_CLAW", "PET_ITEM_QUICK_CLAW", "PET_ITEM_TIER_BOOST" };
             flipperEngine.ValuablePetItemIds = allIds.Where(a => tags.Contains(a.Key)).Select(a => (long)a.Value).ToHashSet();
+            await kafkaCreator.CreateTopicIfNotExist(FlipperEngine.LowPricedAuctionTopic);
+            await kafkaCreator.CreateTopicIfNotExist(FlipperEngine.ProduceTopic);
             await flipperEngine.ProcessPotentialFlipps(stoppingToken);
         }
     }

@@ -52,6 +52,7 @@ namespace Coflnet.Sky.Flipper
 
             services.AddSingleton<GemPriceService>();
             services.AddSingleton<FlipperEngine>();
+            services.AddSingleton<Kafka.KafkaCreator>();
             services.AddHostedService<GemPriceService>(di => di.GetRequiredService<GemPriceService>());
             services.AddSingleton<IPlayerNameApi, PlayerNameApi>(context =>
             {
