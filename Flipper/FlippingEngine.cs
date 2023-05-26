@@ -133,6 +133,8 @@ namespace Coflnet.Sky.Flipper
                 try
                 {
                     var res = await NewAuction(auction, lpp, span);
+                    if(res != null)
+                        Console.WriteLine($"Found bid flip {res.Uuid}");
                 }
                 catch (System.OutOfMemoryException)
                 {
