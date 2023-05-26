@@ -121,7 +121,7 @@ namespace Coflnet.Sky.Flipper
             var min = DateTime.UtcNow.Add(TimeSpan.FromMinutes(0.5));
             var taskFactory = new TaskFactory(new LimitedConcurrencyLevelTaskScheduler(1));
             var toCheck = context.Auctions
-                .Where(a => a.Id > context.Auctions.Max(a => a.Id) - 1000000 && a.End < max && a.End > min && !a.Bin)
+                .Where(a => a.Id > context.Auctions.Max(a => a.Id) - 4000000 && a.End < max && a.End > min && !a.Bin)
                 .Include(a => a.NbtData)
                 .Include(a => a.Enchantments)
                 .Include(a => a.NBTLookup);
