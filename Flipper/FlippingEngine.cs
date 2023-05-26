@@ -117,8 +117,8 @@ namespace Coflnet.Sky.Flipper
         {
             using var lpp = new ProducerBuilder<string, LowPricedAuction>(producerConfig).SetValueSerializer(SerializerFactory.GetSerializer<LowPricedAuction>()).Build();
             using var context = new HypixelContext();
-            var max = DateTime.UtcNow.Add(TimeSpan.FromMinutes(5));
-            var min = DateTime.UtcNow.Add(TimeSpan.FromMinutes(3.5));
+            var max = DateTime.UtcNow.Add(TimeSpan.FromMinutes(2));
+            var min = DateTime.UtcNow.Add(TimeSpan.FromMinutes(0.5));
             var taskFactory = new TaskFactory(new LimitedConcurrencyLevelTaskScheduler(1));
             var toCheck = context.Auctions
                 .Where(a => a.Id > context.Auctions.Max(a => a.Id) - 1000000 && a.End < max && a.End > min && !a.Bin)
