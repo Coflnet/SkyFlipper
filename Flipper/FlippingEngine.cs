@@ -115,7 +115,7 @@ namespace Coflnet.Sky.Flipper
 
         public async Task QueckActiveAuctionsForFlips(CancellationToken stopToken)
         {
-            using var lpp = new ProducerBuilder<string, LowPricedAuction>(producerConfig).SetValueSerializer(SerializerFactory.GetSerializer<LowPricedAuction>()).Build();
+            using var lpp = kafkaCreator.BuildProducer<string, LowPricedAuction>();
             using var context = new HypixelContext();
             var max = DateTime.UtcNow.Add(TimeSpan.FromMinutes(2));
             var min = DateTime.UtcNow.Add(TimeSpan.FromMinutes(0.5));
