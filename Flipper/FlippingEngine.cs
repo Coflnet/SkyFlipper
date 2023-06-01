@@ -133,7 +133,7 @@ namespace Coflnet.Sky.Flipper
                 try
                 {
                     var res = await NewAuction(auction, lpp, span);
-                    if(res != null)
+                    if (res != null)
                         Console.WriteLine($"Found bid flip {res.Uuid}");
                 }
                 catch (System.OutOfMemoryException)
@@ -544,6 +544,10 @@ namespace Coflnet.Sky.Flipper
                         clearedName = clearedName.Replace("✪", "").Trim();
                         relevantAuctions = await GetSelect(auction, context, clearedName, itemId, youngest, ulti, relevantEnchants, oldest, tracking, 120, true)
                         .ToListAsync();
+                        // query recent ones with no stars to avoid price drops
+                        oldest = DateTime.Now - TimeSpan.FromDays(0.5);
+                        relevantAuctions.AddRange(await GetSelect(auction, context, clearedName, itemId, youngest, ulti, relevantEnchants, oldest, tracking, 10, true)
+                        .ToListAsync());
                     }
                 }
             }
