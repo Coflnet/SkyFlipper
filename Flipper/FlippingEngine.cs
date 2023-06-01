@@ -545,8 +545,7 @@ namespace Coflnet.Sky.Flipper
                         relevantAuctions = await GetSelect(auction, context, clearedName, itemId, youngest, ulti, relevantEnchants, oldest, tracking, 120, true)
                         .ToListAsync();
                         // query recent ones with no stars to avoid price drops
-                        oldest = DateTime.Now - TimeSpan.FromDays(0.5);
-                        relevantAuctions.AddRange(await GetSelect(auction, context, clearedName, itemId, youngest, ulti, relevantEnchants, oldest, tracking, 10, true)
+                        relevantAuctions.AddRange(await GetSelect(auction, context, clearedName, itemId, youngest, ulti, relevantEnchants, DateTime.Now - TimeSpan.FromDays(0.5), tracking, 10, true)
                         .ToListAsync());
                     }
                 }
