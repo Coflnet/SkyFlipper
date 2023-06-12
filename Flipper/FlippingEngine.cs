@@ -687,6 +687,8 @@ namespace Coflnet.Sky.Flipper
                 select = AddNBTSelect(select, flatNbt, "TIDAL");
             if (flatNbt.ContainsKey("ability_scroll"))
                 select = AddNBTSelect(select, flatNbt, "ability_scroll");
+            if (flatNbt.ContainsKey("party_hat_emoji"))
+                select = AddNBTSelect(select, flatNbt, "party_hat_emoji");
 
             foreach (var item in ShardAttributes)
             {
