@@ -157,36 +157,20 @@ namespace Coflnet.Sky.Flipper
                 Console.WriteLine("starting worker");
                 var taskFactory = new TaskFactory(new LimitedConcurrencyLevelTaskScheduler(2));
                 //using (var c = new ConsumerBuilder<Ignore, SaveAuction>(conf).SetValueDeserializer(SerializerFactory.GetDeserializer<SaveAuction>()).Build())
-                using (var lpp = kafkaCreator.BuildProducer<string, LowPricedAuction>())
-                using (var p = kafkaCreator.BuildProducer<string, FlipInstance>())
-                {
-                    await Kafka.KafkaConsumer.Consume<SaveAuction>(config, NewAuctionTopic, async auction =>
+                using var lpp = kafkaCreator.BuildProducer<string, LowPricedAuction>();
+                using var p = kafkaCreator.BuildProducer<string, FlipInstance>();
+                await Kafka.KafkaConsumer.Consume<SaveAuction>(config, NewAuctionTopic, auction =>
                     {
 
                         LastLiveProbe = DateTime.Now;
                         // makes no sense to check old auctions
                         if (auction.Start < DateTime.Now - TimeSpan.FromMinutes(5) || !auction.Bin)
-                            return;
+                            return Task.CompletedTask;
                         using var span = activitySource.CreateActivity("AuctionFlip", ActivityKind.Server)
                                            ?.SetTag("uuid", auction.Uuid);
                         try
                         {
-                            var findingTask = taskFactory.StartNew(async () =>
-                            {
-                                try
-                                {
-                                    await throttler.WaitAsync();
-                                    await ProcessSingleFlip(p, auction, lpp, span);
-                                }
-                                catch (Exception e)
-                                {
-                                    dev.Logger.Instance.Error(e, "flip search");
-                                }
-                                finally
-                                {
-                                    throttler.Release();
-                                }
-                            });
+                            ProcessPotentialFlips(auction, taskFactory, lpp, p, span);
                         }
                         catch (System.OutOfMemoryException)
                         {
@@ -198,14 +182,33 @@ namespace Coflnet.Sky.Flipper
                         {
                             Console.WriteLine("testing auction" + e);
                         }
+                        return Task.CompletedTask;
                     }, cancleToken, "sky-flipper");
-                }
-
             }
             catch (Exception e)
             {
                 dev.Logger.Instance.Error($"Flipper threw an exception {e.Message} {e.StackTrace}");
             }
+        }
+
+        private void ProcessPotentialFlips(SaveAuction auction, TaskFactory taskFactory, IProducer<string, LowPricedAuction> lpp, IProducer<string, FlipInstance> p, Activity span)
+        {
+            _ = taskFactory.StartNew(async () =>
+            {
+                try
+                {
+                    await throttler.WaitAsync();
+                    await ProcessSingleFlip(p, auction, lpp, span);
+                }
+                catch (Exception e)
+                {
+                    dev.Logger.Instance.Error(e, "flip search");
+                }
+                finally
+                {
+                    throttler.Release();
+                }
+            });
         }
 
         private async Task ProcessSingleFlip(IProducer<string, FlipInstance> p, SaveAuction auction, IProducer<string, LowPricedAuction> lpp, Activity span)
@@ -702,7 +705,6 @@ namespace Coflnet.Sky.Flipper
                 select = AddNBTSelect(select, flatNbt, "drill_part_upgrade_module");
             }
 
-
             select = AddPetItemSelect(select, flatNbt);
 
             if (flatNbt.ContainsKey("skin"))
@@ -712,11 +714,9 @@ namespace Coflnet.Sky.Flipper
                 select = select.Where(a => a.NBTLookup.Where(n => n.KeyId == keyId && n.Value == val).Any());
             }
 
-
             if (flatNbt.ContainsKey("color") || (IsArmour(auction)))
             {
                 select = AddNBTSelect(select, flatNbt, "color");
-
                 select = AddNBTSelect(select, flatNbt, "dye_item");
             }
 
@@ -731,8 +731,6 @@ namespace Coflnet.Sky.Flipper
                     select = select.Where(a => a.NBTLookup.Where(n => n.KeyId == keyId && n.Value >= min && n.Value < max).Any());
                 }
             }
-
-
 
             bool canHaveGemstones = auction.Tag.StartsWith("DIVAN")
                             || auction.Tag == "GEMSTONE_GAUNTLET";
