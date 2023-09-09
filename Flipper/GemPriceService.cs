@@ -115,7 +115,7 @@ namespace Coflnet.Sky.Commands.Shared
             {
                 var lookup = auction.NBTLookup;
                 // from db
-                return GetGemWrthFromLookup(lookup);
+                return GetGemWrthFromLookup(lookup.ToList());
             }
             var gems = auction.FlatenedNBT.Where(n => n.Value == "PERFECT" || n.Value == "FLAWLESS");
             var additionalWorth = 0;
