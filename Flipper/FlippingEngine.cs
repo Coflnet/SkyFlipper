@@ -693,10 +693,11 @@ namespace Coflnet.Sky.Flipper
             if (flatNbt.ContainsKey("party_hat_emoji"))
                 select = AddNBTSelect(select, flatNbt, "party_hat_emoji");
 
-            foreach (var item in ShardAttributes)
-            {
-                select = AddNBTSelect(select, flatNbt, item.Key);
-            }
+            if (flatNbt.Any(n => Constants.AttributeKeys.Contains(n.Key)))
+                foreach (var item in Constants.AttributeKeys)
+                {
+                    select = AddNBTSelect(select, flatNbt, item);
+                }
 
             if (auction.Tag.Contains("_DRILL"))
             {
@@ -802,9 +803,11 @@ namespace Coflnet.Sky.Flipper
                 return select.Where(a => !a.NBTLookup.Where(n => n.KeyId == keyId).Any());
 
             if (!long.TryParse(flatNbt[keyValue], out long val))
+            {
                 val = NBT.Instance.GetValueId(keyId, flatNbt[keyValue]);
-            select = select.Where(a => a.NBTLookup.Where(n => n.KeyId == keyId && n.Value == val).Any());
-            return select;
+                return select.Where(a => a.NBTLookup.Where(n => n.KeyId == keyId && n.Value == val).Any());
+            }
+            return select.Where(a => a.NBTLookup.Where(n => n.KeyId == keyId && n.Value <= val).Any());
         }
 
         private static IQueryable<SaveAuction> AddCandySelect(IQueryable<SaveAuction> select, Dictionary<string, string> flatNbt, string keyValue)
