@@ -522,7 +522,10 @@ namespace Coflnet.Sky.Flipper
             var highLvlEnchantList = relevantEnchants.Where(e => !UltimateEnchants.ContainsKey(e.Type)).Select(a => a.Type).ToList();
             var oldest = DateTime.Now - TimeSpan.FromHours(2);
 
-            IQueryable<SaveAuction> select = GetSelect(auction, context, clearedName, itemId, youngest, ulti, relevantEnchants, oldest, tracking, 30);
+            var baseSelect = context.Auctions
+                .Where(a => a.ItemId == itemId)
+                .Where(a => a.HighestBidAmount > 0);
+            IQueryable<SaveAuction> select = GetSelect(auction, baseSelect, clearedName, youngest, ulti, relevantEnchants, oldest, tracking, 30);
 
             var relevantAuctions = await select
                 .ToListAsync();
@@ -531,7 +534,7 @@ namespace Coflnet.Sky.Flipper
             {
                 // to few auctions in last hour, try a whole day
                 oldest = DateTime.Now - TimeSpan.FromDays(1.5);
-                relevantAuctions = relevantAuctions.Concat(await GetSelect(auction, context, clearedName, itemId, youngest, ulti, relevantEnchants, oldest, tracking, 90)
+                relevantAuctions = relevantAuctions.Concat(await GetSelect(auction, baseSelect, clearedName, youngest, ulti, relevantEnchants, oldest, tracking, 90)
                 .ToListAsync()).ToList();
 
                 if (relevantAuctions.Count < 50 && PotetialFlipps.Count < 2000)
@@ -539,22 +542,22 @@ namespace Coflnet.Sky.Flipper
                     // to few auctions in a day, query a week
                     youngest = oldest;
                     oldest = DateTime.Now - TimeSpan.FromDays(8);
-                    relevantAuctions.AddRange(await GetSelect(auction, context, clearedName, itemId, youngest, ulti, relevantEnchants, oldest, tracking, 120)
+                    relevantAuctions.AddRange(await GetSelect(auction, baseSelect, clearedName, youngest, ulti, relevantEnchants, oldest, tracking, 120)
                     .ToListAsync());
                     if (relevantAuctions.Count < 10)
                     {
                         youngest = DateTime.Now;
                         clearedName = clearedName.Replace("✪", "").Trim();
-                        relevantAuctions = await GetSelect(auction, context, clearedName, itemId, youngest, ulti, relevantEnchants, oldest, tracking, 120, true)
+                        relevantAuctions = await GetSelect(auction, baseSelect, clearedName, youngest, ulti, relevantEnchants, oldest, tracking, 120, true)
                         .ToListAsync();
                         // query recent ones with no stars to avoid price drops
-                        relevantAuctions.AddRange(await GetSelect(auction, context, clearedName, itemId, youngest, ulti, relevantEnchants, DateTime.Now - TimeSpan.FromDays(0.5), tracking, 10, true)
+                        relevantAuctions.AddRange(await GetSelect(auction, baseSelect, clearedName, youngest, ulti, relevantEnchants, DateTime.Now - TimeSpan.FromDays(0.5), tracking, 10, true)
                         .ToListAsync());
                     }
                 }
             }
             else if (relevantAuctions.Count >= 30)
-                await AddVeryRecentReferencesForHighVolume(auction, context, tracking, clearedName, itemId, youngest, relevantEnchants, ulti, relevantAuctions);
+                await AddVeryRecentReferencesForHighVolume(auction, baseSelect, tracking, clearedName, youngest, relevantEnchants, ulti, relevantAuctions);
 
             /* got replaced with average overall lookup
             if (relevantAuctions.Count < 3 && PotetialFlipps.Count < 100)
@@ -577,10 +580,10 @@ namespace Coflnet.Sky.Flipper
             };
         }
 
-        private async Task AddVeryRecentReferencesForHighVolume(SaveAuction auction, HypixelContext context, FindTracking tracking, string clearedName, int itemId, DateTime youngest, List<Enchantment> relevantEnchants, Enchantment ulti, List<SaveAuction> relevantAuctions)
+        private async Task AddVeryRecentReferencesForHighVolume(SaveAuction auction, IQueryable<SaveAuction> select, FindTracking tracking, string clearedName, DateTime youngest, List<Enchantment> relevantEnchants, Enchantment ulti, List<SaveAuction> relevantAuctions)
         {
             relevantAuctions.AddRange(
-                                await GetSelect(auction, context, clearedName, itemId, youngest, ulti, relevantEnchants, DateTime.Now - TimeSpan.FromMinutes(15), tracking, 20, true)
+                                await GetSelect(auction, select, clearedName, youngest, ulti, relevantEnchants, DateTime.Now - TimeSpan.FromMinutes(15), tracking, 20, true)
                                         .ToListAsync());
         }
 
@@ -592,11 +595,10 @@ namespace Coflnet.Sky.Flipper
 
         private readonly static HashSet<ItemReferences.Reforge> relevantReforges = Constants.RelevantReforges;
 
-        private IQueryable<SaveAuction> GetSelect(
+        public IQueryable<SaveAuction> GetSelect(
             SaveAuction auction,
-            HypixelContext context,
+            IQueryable<SaveAuction> select,
             string clearedName,
-            int itemId,
             DateTime youngest,
             Enchantment ulti,
             List<Enchantment> highLvlEnchantList,
@@ -605,10 +607,6 @@ namespace Coflnet.Sky.Flipper
             int limit = 60,
             bool reduced = false)
         {
-            var select = context.Auctions
-                .Where(a => a.ItemId == itemId)
-                .Where(a => a.HighestBidAmount > 0);
-
             if (auction.Tag != "ENCHANTED_BOOK") // the rarity is often used from scamming but doesn't change price
                 select = select.Where(a => a.Tier == auction.Tier);
 

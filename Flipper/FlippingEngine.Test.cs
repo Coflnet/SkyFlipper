@@ -121,6 +121,70 @@ namespace Coflnet.Sky.Flipper
             // chooses the recent median
             Assert.AreEqual(newest.HighestBidAmount, result);
         }
+
+        public class NbtMock : INBT
+        {
+            public short GetKeyId(string name)
+            {
+                // hash to get short 
+                return (short)(name.GetHashCode() % 10000);
+            }
+
+            public int GetValueId(short key, string value)
+            {
+                throw new Exception("should not be used (int value)");
+            }
+        }
+
+        [Test]
+        public void AttributeCheck()
+        {
+            var engine = new FlipperEngine(null, null, null, null, null, null);
+            NBT.Instance = new NbtMock();
+            var samples = new SaveAuction[]{
+                new SaveAuction()
+                {
+                    FlatenedNBT = new Dictionary<string, string>()
+                    {
+                        {"infection", "6"},
+                        {"double_hook", "7"}
+                    },
+                    NBTLookup = new List<NBTLookup>(),
+                    Enchantments = new(),
+                    Tag = "MAGMA_ROD",
+                    End = DateTime.Now - TimeSpan.FromDays(1),
+                },
+                new SaveAuction()
+                {
+                    FlatenedNBT = new Dictionary<string, string>()
+                    {
+                        {"infection", "7"},
+                        {"double_hook", "7"}
+                    },
+                    NBTLookup = new List<NBTLookup>(),
+                    Enchantments = new(),
+                    Tag = "MAGMA_ROD",
+                    End = DateTime.Now - TimeSpan.FromDays(1),
+                }
+            };
+            foreach (var item in samples)
+            {
+                item.NBTLookup = NBT.CreateLookup(item.Tag, null, item.FlatenedNBT.Select(x => new KeyValuePair<string, object>(x.Key, (object)int.Parse(x.Value))).ToList());
+            }
+            var query = engine.GetSelect(new SaveAuction()
+            {
+                FlatenedNBT = new Dictionary<string, string>()
+                {
+                    {"infection", "6"},
+                    {"double_hook", "7"}
+                },
+                Enchantments = new(),
+                Tag = "MAGMA_ROD",
+            }, samples.AsQueryable(), null, DateTime.Now, null, new(), default, null, 0);
+            var res = query.ToList();
+            Assert.AreEqual(1, res.Count);
+        }
+
         [Test]
         [TestCase("PET_ITEM_ALL_SKILLS_BOOST_COMMON", 30000000, false)]
         [TestCase("PET_ITEM_ALL_SKILLS_BOOST_COMMON", 3000000, true)]

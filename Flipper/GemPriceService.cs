@@ -114,6 +114,8 @@ namespace Coflnet.Sky.Commands.Shared
             if (auction.NbtData == null)
             {
                 var lookup = auction.NBTLookup;
+                if (lookup == null)
+                    return 0;
                 // from db
                 return GetGemWrthFromLookup(lookup.ToList());
             }
