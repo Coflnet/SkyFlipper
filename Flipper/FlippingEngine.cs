@@ -668,7 +668,7 @@ namespace Coflnet.Sky.Flipper
             if (auction.Tag == "ASPECT_OF_THE_VOID" || auction.Tag == "ASPECT_OF_THE_END")
                 select = AddNBTSelect(select, flatNbt, "ethermerge");
             if (flatNbt.ContainsKey("edition"))
-                select = AddNbtRangeSelect(ref select, flatNbt, "edition", 100, 10);
+                select = AddNbtRangeSelect(select, flatNbt, "edition", 100, 10);
 
             if (flatNbt.ContainsKey("new_years_cake"))
                 select = AddNBTSelect(select, flatNbt, "new_years_cake");
@@ -690,6 +690,8 @@ namespace Coflnet.Sky.Flipper
                 select = AddNBTSelect(select, flatNbt, "ability_scroll");
             if (flatNbt.ContainsKey("party_hat_emoji"))
                 select = AddNBTSelect(select, flatNbt, "party_hat_emoji");
+            if (auction.Tag.Contains("FINAL_DESTINATION"))
+                select = AddNbtRangeSelect(select, flatNbt, "eman_kills", 1000, 10);
 
             if (flatNbt.Any(n => Constants.AttributeKeys.Contains(n.Key)))
                 foreach (var item in Constants.AttributeKeys)
@@ -820,7 +822,7 @@ namespace Coflnet.Sky.Flipper
         private static IQueryable<SaveAuction> AddMidasSelect(IQueryable<SaveAuction> select, Dictionary<string, string> flatNbt, string keyValue)
         {
             var maxDiff = 2_000_000;
-            return AddNbtRangeSelect(ref select, flatNbt, keyValue, maxDiff);
+            return AddNbtRangeSelect(select, flatNbt, keyValue, maxDiff);
         }
 
         /// <summary>
@@ -832,10 +834,14 @@ namespace Coflnet.Sky.Flipper
         /// <param name="maxDiff">By how much the range is extended in both directions</param>
         /// <param name="percentIncrease">How many percent difference should be added to maxDiff</param>
         /// <returns></returns>
-        private static IQueryable<SaveAuction> AddNbtRangeSelect(ref IQueryable<SaveAuction> select, Dictionary<string, string> flatNbt, string keyValue, long maxDiff, int percentIncrease = 0)
+        private static IQueryable<SaveAuction> AddNbtRangeSelect(IQueryable<SaveAuction> select, Dictionary<string, string> flatNbt, string keyValue, long maxDiff, int percentIncrease = 0)
         {
-            var val = long.Parse(flatNbt[keyValue]);
             var keyId = NBT.Instance.GetKeyId(keyValue);
+            if (!flatNbt.TryGetValue(keyValue, out var stringValue))
+            {
+                return select.Where(a => !a.NBTLookup.Where(n => n.KeyId == keyId).Any());
+            }
+            var val = long.Parse(stringValue);
             maxDiff += val * percentIncrease;
             select = select.Where(a => a.NBTLookup.Where(n => n.KeyId == keyId && n.Value > val - maxDiff && n.Value < val + maxDiff).Any());
             return select;
