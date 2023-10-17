@@ -333,6 +333,8 @@ namespace Coflnet.Sky.Flipper
             });
             await SaveHitOnFlip(referenceElement, auction, recomendedBuyUnder);
 
+            return null; // deactivated old flipper
+
             var itemTag = auction.Tag;
             var name = playerNameApi.PlayerNameNameUuidGetAsync(auction.AuctioneerId);
             var filters = new Dictionary<string, string>();
