@@ -23,7 +23,17 @@ namespace Coflnet.Sky.Flipper
             var allIds = await itemsApi.ItemsIdsGetAsync();
             if(allIds == null)
                 throw new System.Exception("Could not load item ids from SkyItemService. Make sure it is reachable.");
-            var tags = new string[] { "MINOS_RELIC", "DWARF_TURTLE_SHELMET", "QUICK_CLAW", "PET_ITEM_QUICK_CLAW", "PET_ITEM_TIER_BOOST" };
+            var tags = new string[]
+            {
+                "MINOS_RELIC",
+                "DWARF_TURTLE_SHELMET",
+                "QUICK_CLAW",
+                "PET_ITEM_QUICK_CLAW",
+                "PET_ITEM_TIER_BOOST",
+                "GREEN_BANDANA",
+                "PET_ITEM_LUCKY_CLOVER",
+                "PET_ITEM_EXP_SHARE"
+            };
             flipperEngine.ValuablePetItemIds = allIds.Where(a => tags.Contains(a.Key)).Select(a => (long)a.Value).ToHashSet();
             await kafkaCreator.CreateTopicIfNotExist(FlipperEngine.LowPricedAuctionTopic);
             await kafkaCreator.CreateTopicIfNotExist(FlipperEngine.ProduceTopic);
