@@ -334,59 +334,6 @@ namespace Coflnet.Sky.Flipper
             await SaveHitOnFlip(referenceElement, auction, recomendedBuyUnder);
 
             return null; // deactivated old flipper
-
-            var itemTag = auction.Tag;
-            var name = playerNameApi.PlayerNameNameUuidGetAsync(auction.AuctioneerId);
-            var filters = new Dictionary<string, string>();
-            var ulti = auction.Enchantments.Where(e => UltimateEnchants.ContainsKey(e.Type)).FirstOrDefault();
-            if (ulti != null)
-            {
-                filters["Enchantment"] = ulti.Type.ToString();
-                filters["EnchantLvl"] = ulti.Level.ToString();
-            }
-            if (relevantReforges.Contains(auction.Reforge))
-            {
-                filters["Reforge"] = auction.Reforge.ToString();
-            }
-            filters["Rarity"] = auction.Tier.ToString();
-
-            var exactLowestTask = ItemPrices.GetLowestBin(itemTag, filters);
-            List<ItemPrices.AuctionPreview> lowestBin = await ItemPrices.GetLowestBin(itemTag, auction.Tier);
-            var exactLowest = await exactLowestTask;
-            if (exactLowest?.Count > 1)
-            {
-                lowestBin = exactLowest;
-            }
-            // prevent price manipulation
-            if (lowestBin?.FirstOrDefault()?.Price > medianPrice)
-            {
-                span?.SetTag("error", true).SetTag("reason", "lbin higher than median " + lowestBin?.FirstOrDefault()?.Uuid);
-                return null;
-            }
-
-            var flip = new FlipInstance()
-            {
-                MedianPrice = targetPrice,
-                Name = auction.ItemName,
-                Uuid = auction.Uuid,
-                LastKnownCost = (int)price * auction.Count,
-                Volume = (float)(relevantAuctions.Count / (DateTime.Now - referenceElement.Oldest).TotalDays),
-                Tag = auction.Tag,
-                Bin = auction.Bin,
-                UId = auction.UId,
-                Rarity = auction.Tier,
-                Interesting = PropertiesSelector.GetProperties(auction).OrderByDescending(a => a.Rating).Select(a => a.Value).ToList(),
-                SellerName = (await name).Trim('"'),
-                LowestBin = lowestBin?.FirstOrDefault()?.Price + additionalWorth,
-                SecondLowestBin = lowestBin?.Count >= 2 ? lowestBin[1].Price : 0L,
-                Auction = auction
-            };
-
-            foundFlipCount.Inc();
-
-            time.Observe((DateTime.Now - auction.FindTime).TotalSeconds);
-
-            return flip;
         }
 
         public async Task<long> GetWeightedMedian(SaveAuction auction, List<SaveAuction> relevantAuctions)
@@ -402,6 +349,13 @@ namespace Coflnet.Sky.Flipper
                                 .Select(a => a.value)
                                 .Skip(1)
                                 .FirstOrDefault();
+            if(auctions.Count > 10 && relevantAuctions.All(a=>a.End > DateTime.Now - TimeSpan.FromHours(20)))
+            {
+                // very high volume item could drop suddenly, use 25th percentile instead
+                fullTime = auctions.Select(a => a.value).OrderBy(a => a)
+                                .Skip(relevantAuctions.Count / 4)
+                                .FirstOrDefault();
+            }
 
             return Math.Min(fullTime, shortTerm);
         }
