@@ -29,10 +29,6 @@ namespace Coflnet.Sky.Flipper
         public static ConcurrentDictionary<Enchantment.EnchantmentType, bool> UltimateEnchants = new ConcurrentDictionary<Enchantment.EnchantmentType, bool>();
         public static ConcurrentDictionary<Enchantment.EnchantmentType, byte> RelevantEnchants = new ConcurrentDictionary<Enchantment.EnchantmentType, byte>();
 
-
-        private ConcurrentQueue<SaveAuction> PotetialFlipps = new ConcurrentQueue<SaveAuction>();
-        private ConcurrentQueue<SaveAuction> LowPriceQueue = new ConcurrentQueue<SaveAuction>();
-
         internal IServiceScopeFactory serviceFactory;
         private Commands.Shared.GemPriceService gemPriceService;
         private IPlayerNameApi playerNameApi;
@@ -236,14 +232,6 @@ namespace Coflnet.Sky.Flipper
         }
 
         private uint _auctionCounter = 0;
-        private bool GetAuctionToCheckFlipability(out SaveAuction auction)
-        {
-            // mix in lowerPrice
-            if (_auctionCounter++ % 3 != 0)
-                if (PotetialFlipps.TryDequeue(out auction))
-                    return true;
-            return LowPriceQueue.TryDequeue(out auction);
-        }
 
         public ConcurrentDictionary<long, List<long>> relevantAuctionIds = new ConcurrentDictionary<long, List<long>>();
 
@@ -349,7 +337,7 @@ namespace Coflnet.Sky.Flipper
                                 .Select(a => a.value)
                                 .Skip(1)
                                 .FirstOrDefault();
-            if(auctions.Count > 10 && relevantAuctions.All(a=>a.End > DateTime.Now - TimeSpan.FromHours(20)))
+            if (auctions.Count > 10 && relevantAuctions.All(a => a.End > DateTime.Now - TimeSpan.FromHours(20)))
             {
                 // very high volume item could drop suddenly, use 25th percentile instead
                 fullTime = auctions.Select(a => a.value).OrderBy(a => a)
@@ -493,7 +481,7 @@ namespace Coflnet.Sky.Flipper
                 relevantAuctions = relevantAuctions.Concat(await GetSelect(auction, baseSelect, clearedName, youngest, ulti, relevantEnchants, oldest, tracking, 90)
                 .ToListAsync()).ToList();
 
-                if (relevantAuctions.Count < 50 && PotetialFlipps.Count < 2000)
+                if (relevantAuctions.Count < 50)
                 {
                     // to few auctions in a day, query a week
                     youngest = oldest;
@@ -522,8 +510,13 @@ namespace Coflnet.Sky.Flipper
                 relevantAuctions = await GetSelect(auction, context, null, itemId, youngest, matchingCount, ulti, ultiList, highLvlEnchantList, oldest)
                         .ToListAsync();
             } */
+            // deduplicate both sellers and buyers
             if (relevantAuctions.Count > 1)
-                relevantAuctions = relevantAuctions.GroupBy(a => a.SellerId).Select(a => a.First()).ToList();
+                relevantAuctions = relevantAuctions.GroupBy(a => a.SellerId)
+                    .Select(a => a.OrderBy(s => s.HighestBidAmount).First())
+                    .GroupBy(a => a.Bids.OrderByDescending(b => b.Amount).First().Bidder)
+                    .Select(activitySource => activitySource.First()).ToList();
+
 
             // filter out auctions that are not master crypts sols
             if (!auction.FlatenedNBT.Any(f => f.Key.StartsWith("MASTER_CRYPT")))

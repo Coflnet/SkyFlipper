@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/sdk:7.0 as build
+FROM mcr.microsoft.com/dotnet/sdk:8.0 as build
 WORKDIR /build
 RUN echo "revision 37a7e96bdc9cb7d0c6e9a1e280e37297a975a118b"
 RUN git clone --depth=1 https://github.com/Coflnet/HypixelSkyblock.git dev
@@ -9,7 +9,7 @@ COPY . .
 RUN dotnet test
 RUN dotnet publish -c release -o /app
 
-FROM mcr.microsoft.com/dotnet/aspnet:7.0
+FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
 
 COPY --from=build /app .
