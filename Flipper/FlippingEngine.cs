@@ -468,7 +468,7 @@ namespace Coflnet.Sky.Flipper
 
             var baseSelect = context.Auctions
                 .Where(a => a.ItemId == itemId)
-                .Include(a=>a.Bids)
+                .Include(a => a.Bids)
                 .Where(a => a.HighestBidAmount > 0);
             IQueryable<SaveAuction> select = GetSelect(auction, baseSelect, clearedName, youngest, ulti, relevantEnchants, oldest, tracking, 30);
 
@@ -512,12 +512,7 @@ namespace Coflnet.Sky.Flipper
                         .ToListAsync();
             } */
             // deduplicate both sellers and buyers
-            if (relevantAuctions.Count > 1)
-                relevantAuctions = relevantAuctions.GroupBy(a => a.SellerId)
-                    .Select(a => a.OrderBy(s => s.HighestBidAmount).First())
-                    .GroupBy(a => a.Bids.OrderByDescending(b => b.Amount).First().Bidder)
-                    .Select(activitySource => activitySource.First()).ToList();
-
+            relevantAuctions = ApplyAntiMarketManipulation(relevantAuctions);
 
             // filter out auctions that are not master crypts sols
             if (!auction.FlatenedNBT.Any(f => f.Key.StartsWith("MASTER_CRYPT")))
@@ -528,6 +523,28 @@ namespace Coflnet.Sky.Flipper
                 references = relevantAuctions,
                 Oldest = oldest
             };
+        }
+
+        /// <summary>
+        /// Deduplicates auctions by seller and buyer (when manipulating few accounts are used)
+        /// </summary>
+        /// <param name="relevantAuctions"></param>
+        /// <returns></returns>
+        private static List<SaveAuction> ApplyAntiMarketManipulation(List<SaveAuction> relevantAuctions)
+        {
+            if (relevantAuctions.Count > 1)
+                relevantAuctions = relevantAuctions.GroupBy(a => a.SellerId)
+                    .Select(a => a.OrderBy(s => s.HighestBidAmount).First())
+                    .GroupBy(a => a.Bids.OrderByDescending(b => b.Amount).First().Bidder)
+                    .Select(activitySource => activitySource.First()).ToList();
+
+            foreach (var item in relevantAuctions)
+            {
+                // after deduplication not needed
+                item.Bids = null;
+            }
+
+            return relevantAuctions;
         }
 
         private async Task AddVeryRecentReferencesForHighVolume(SaveAuction auction, IQueryable<SaveAuction> select, FindTracking tracking, string clearedName, DateTime youngest, List<Enchantment> relevantEnchants, Enchantment ulti, List<SaveAuction> relevantAuctions)
