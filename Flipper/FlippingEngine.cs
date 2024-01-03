@@ -468,6 +468,7 @@ namespace Coflnet.Sky.Flipper
 
             var baseSelect = context.Auctions
                 .Where(a => a.ItemId == itemId)
+                .Include(a=>a.Bids)
                 .Where(a => a.HighestBidAmount > 0);
             IQueryable<SaveAuction> select = GetSelect(auction, baseSelect, clearedName, youngest, ulti, relevantEnchants, oldest, tracking, 30);
 
