@@ -117,7 +117,8 @@ namespace Coflnet.Sky.Flipper
                 highest
             };
             var mockConfig = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string>() { { "API_BASE_URL", "http://mock.url" } }).Build();
-            var result = await new FlipperEngine(null, new Commands.Shared.GemPriceService(null, null, mockConfig), null, null, null, null).GetWeightedMedian(new SaveAuction(), references);
+            var result = await new FlipperEngine(null, new Commands.Shared.GemPriceService(null, null, mockConfig), null, null, null, null, null)
+                            .GetWeightedMedian(new SaveAuction(), references);
             // chooses the recent median
             Assert.AreEqual(newest.HighestBidAmount, result);
         }
@@ -139,7 +140,7 @@ namespace Coflnet.Sky.Flipper
         [Test]
         public void AttributeCheck()
         {
-            var engine = new FlipperEngine(null, null, null, null, null, null);
+            var engine = new FlipperEngine(null, null, null, null, null, null, null);
             NBT.Instance = new NbtMock();
             var samples = new SaveAuction[]{
                 new SaveAuction()

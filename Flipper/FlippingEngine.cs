@@ -14,6 +14,7 @@ using Coflnet.Sky.PlayerName.Client.Api;
 using OpenTracing.Propagation;
 using Microsoft.Extensions.Configuration;
 using System.Diagnostics;
+using Coflnet.Sky.Core.Services;
 
 namespace Coflnet.Sky.Flipper
 {
@@ -57,6 +58,7 @@ namespace Coflnet.Sky.Flipper
         private SemaphoreSlim throttler = new SemaphoreSlim(25);
 
         public HashSet<long> ValuablePetItemIds = new();
+        private HypixelItemService itemService;
 
         private static readonly Dictionary<string, short> ShardAttributes = new(){
             {"mana_pool", 1},
@@ -91,7 +93,7 @@ namespace Coflnet.Sky.Flipper
             }
         }
 
-        public FlipperEngine(IServiceScopeFactory factory, Commands.Shared.GemPriceService gemPriceService, IPlayerNameApi playerNameApi, Kafka.KafkaCreator kafkaCreator, IConfiguration config, ActivitySource activitySource)
+        public FlipperEngine(IServiceScopeFactory factory, Commands.Shared.GemPriceService gemPriceService, IPlayerNameApi playerNameApi, Kafka.KafkaCreator kafkaCreator, IConfiguration config, ActivitySource activitySource, HypixelItemService itemService)
         {
             this.serviceFactory = factory;
             this.gemPriceService = gemPriceService;
@@ -99,6 +101,7 @@ namespace Coflnet.Sky.Flipper
             this.kafkaCreator = kafkaCreator;
             this.config = config;
             this.activitySource = activitySource;
+            this.itemService = itemService;
         }
 
         private RestSharp.RestClient apiClient = new RestSharp.RestClient(SimplerConfig.Config.Instance["api_base_url"]);
@@ -151,6 +154,7 @@ namespace Coflnet.Sky.Flipper
             try
             {
                 Console.WriteLine("starting worker");
+                await itemService.GetItemsAsync();
                 var taskFactory = new TaskFactory(new LimitedConcurrencyLevelTaskScheduler(2));
                 //using (var c = new ConsumerBuilder<Ignore, SaveAuction>(conf).SetValueDeserializer(SerializerFactory.GetDeserializer<SaveAuction>()).Build())
                 using var lpp = kafkaCreator.BuildProducer<string, LowPricedAuction>();
@@ -702,13 +706,12 @@ namespace Coflnet.Sky.Flipper
                 }
             }
 
-            bool canHaveGemstones = auction.Tag.StartsWith("DIVAN")
-                            || auction.Tag == "GEMSTONE_GAUNTLET";
+            bool canHaveGemstones = itemService?.GetUnlockableSlots(auction.Tag)?.Any() ?? false;
             if (canHaveGemstones
                 || flatNbt.ContainsKey("unlocked_slots"))
                 select = AddNBTSelect(select, flatNbt, "unlocked_slots");
 
-            if (canHaveGemstones || flatNbt.ContainsKey("gemstone_slots"))
+            if (flatNbt.ContainsKey("gemstone_slots")) // I think this is the old gemstone format
                 select = AddNBTSelect(select, flatNbt, "gemstone_slots");
 
             select = AddEnchantmentSubselect(auction, highLvlEnchantList, select, ultiLevel, ultiType, track, reduced);

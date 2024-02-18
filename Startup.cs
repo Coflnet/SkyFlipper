@@ -10,6 +10,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Models;
 using Prometheus;
 using Coflnet.Sky.PlayerName.Client.Api;
+using Coflnet.Sky.Core.Services;
 
 namespace Coflnet.Sky.Flipper
 {
@@ -54,6 +55,8 @@ namespace Coflnet.Sky.Flipper
             services.AddSingleton<FlipperEngine>();
             services.AddSingleton<Kafka.KafkaCreator>();
             services.AddHostedService<GemPriceService>(di => di.GetRequiredService<GemPriceService>());
+            services.AddSingleton<HypixelItemService>();
+            services.AddHttpClient();
             services.AddSingleton<IPlayerNameApi, PlayerNameApi>(context =>
             {
                 var config = context.GetRequiredService<IConfiguration>();
