@@ -645,7 +645,7 @@ namespace Coflnet.Sky.Flipper
 
             if (flatNbt.ContainsKey("new_years_cake"))
                 select = AddNBTSelect(select, flatNbt, "new_years_cake");
-            if ((flatNbt.ContainsKey("dungeon_item_level") || itemService.GetStarIngredients(auction.Tag, 1).Any()) && !reduced)
+            if ((flatNbt.ContainsKey("dungeon_item_level") || (itemService?.GetStarIngredients(auction.Tag, 1).Any() ?? false)) && !reduced)
                 select = AddNBTSelect(select, flatNbt, "dungeon_item_level");
             if (flatNbt.ContainsKey("candyUsed"))
                 select = AddCandySelect(select, flatNbt, "candyUsed");
