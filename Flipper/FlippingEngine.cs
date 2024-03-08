@@ -531,17 +531,21 @@ namespace Coflnet.Sky.Flipper
         }
 
         /// <summary>
-        /// Deduplicates auctions by seller and buyer (when manipulating few accounts are used)
+        /// Deduplicates auctions by seller, item id and buyer (when manipulating few accounts are used)
         /// </summary>
         /// <param name="relevantAuctions"></param>
         /// <returns></returns>
         private static List<SaveAuction> ApplyAntiMarketManipulation(List<SaveAuction> relevantAuctions)
         {
+            var counter = 1;
             if (relevantAuctions.Count > 1)
                 relevantAuctions = relevantAuctions.GroupBy(a => a.SellerId)
                     .Select(a => a.OrderBy(s => s.HighestBidAmount).First())
                     .GroupBy(a => a.Bids.OrderByDescending(b => b.Amount).First().Bidder)
-                    .Select(activitySource => activitySource.First()).ToList();
+                    .Select(activitySource => activitySource.First())
+                    .GroupBy(a => a.FlatenedNBT.TryGetValue("uid", out string uid) ? uid : counter++.ToString())
+                    .Select(a => a.First())
+                    .ToList();
 
             foreach (var item in relevantAuctions)
             {
