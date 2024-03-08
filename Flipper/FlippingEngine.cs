@@ -56,6 +56,7 @@ namespace Coflnet.Sky.Flipper
 
         public DateTime LastLiveProbe = DateTime.Now;
         private SemaphoreSlim throttler = new SemaphoreSlim(25);
+        private static readonly DateTime UnlockedIntroduction = new DateTime(2021, 9, 4);
 
         public HashSet<long> ValuablePetItemIds = new();
         private HypixelItemService itemService;
@@ -709,7 +710,10 @@ namespace Coflnet.Sky.Flipper
             bool canHaveGemstones = itemService?.GetUnlockableSlots(auction.Tag)?.Any() ?? false;
             if (canHaveGemstones
                 || flatNbt.ContainsKey("unlocked_slots"))
+            {
                 select = AddNBTSelect(select, flatNbt, "unlocked_slots");
+                select = select.Where(a => a.ItemCreatedAt > UnlockedIntroduction);
+            }
 
             if (flatNbt.ContainsKey("gemstone_slots")) // I think this is the old gemstone format
                 select = AddNBTSelect(select, flatNbt, "gemstone_slots");
