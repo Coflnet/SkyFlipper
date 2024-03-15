@@ -398,7 +398,7 @@ namespace Coflnet.Sky.Flipper
         }
 
         private static HashSet<string> ignoredNbt = new HashSet<string>()
-                { "uid", "spawnedFor", "bossId", "exp", "uuid", "hpc", "active" };
+                { "uid", "spawnedFor", "bossId", "exp", "uuid", "hpc", "active", "uniqueId", "hideRightClick", "noMove" };
         /// <summary>
         /// Gets relevant items for an auction, checks cache first
         /// </summary>
