@@ -684,7 +684,7 @@ namespace Coflnet.Sky.Flipper
                 select = AddNBTSelect(select, flatNbt, "drill_part_upgrade_module");
             }
 
-            select = AddPetItemSelect(select, flatNbt);
+            select = AddPetItemSelect(select, flatNbt, auction.StartingBid);
 
             if (flatNbt.ContainsKey("skin"))
             {
@@ -750,14 +750,14 @@ namespace Coflnet.Sky.Flipper
             return select;
         }
 
-        private IQueryable<SaveAuction> AddPetItemSelect(IQueryable<SaveAuction> select, Dictionary<string, string> flatNbt)
+        private IQueryable<SaveAuction> AddPetItemSelect(IQueryable<SaveAuction> select, Dictionary<string, string> flatNbt, long startingBid)
         {
             if (flatNbt.ContainsKey("heldItem"))
             {
                 var keyId = NBT.Instance.GetKeyId("heldItem");
                 var val = ItemDetails.Instance.GetItemIdForTag(flatNbt["heldItem"]);
                 // only include boosts if there are still exp to be boosted
-                if (ShouldPetItemMatch(flatNbt))
+                if (ShouldPetItemMatch(flatNbt, startingBid))
                     select = select.Where(a => a.NBTLookup.Where(n => n.KeyId == keyId && n.Value == val).Any());
                 else
                     select = select.Where(a => !a.NBTLookup.Where(n => n.KeyId == keyId && ValuablePetItemIds.Contains(n.Value)).Any());
@@ -771,9 +771,31 @@ namespace Coflnet.Sky.Flipper
             return select;
         }
 
-        public static bool ShouldPetItemMatch(Dictionary<string, string> flatNbt)
+        public static bool ShouldPetItemMatch(Dictionary<string, string> flatNbt, long startingBid)
         {
-            return flatNbt.TryGetValue("exp", out string expString) && double.Parse(expString) < 24_000_000 || !(flatNbt["heldItem"].Contains("SKILL") && flatNbt["heldItem"].Contains("BOOST"));
+            if (!flatNbt.ContainsKey("heldItem") || !flatNbt.ContainsKey("exp"))
+                return false;
+            var shouldMatch = flatNbt["heldItem"] switch
+            {
+                "MINOS_RELIC" => true,
+                "QUICK_CLAW" => true,
+                "PET_ITEM_QUICK_CLAW" => true,
+                "PET_ITEM_TIER_BOOST" => true,
+                "PET_ITEM_LUCKY_CLOVER" => true,
+                "PET_ITEM_LUCKY_CLOVER_DROP" => true,
+                "GREEN_BANDANA" => true,
+                "PET_ITEM_COMBAT_SKILL_BOOST_EPIC" => true,
+                "PET_ITEM_FISHING_SKILL_BOOST_EPIC" => true,
+                "PET_ITEM_FORAGING_SKILL_BOOST_EPIC" => true,
+                "ALL_SKILLS_SUPER_BOOST" => true,
+                "PET_ITEM_EXP_SHARE" => true,
+                _ => false
+            };
+            if (shouldMatch)
+                return shouldMatch;
+
+            return (flatNbt.TryGetValue("exp", out string expString) && double.Parse(expString) < 24_000_000 || !(flatNbt["heldItem"].Contains("SKILL") && flatNbt["heldItem"].Contains("BOOST"))) 
+                && startingBid < 20_000_000; // don't care about low value boosts on expensive items
         }
 
         private static IQueryable<SaveAuction> AddNBTSelect(IQueryable<SaveAuction> select, Dictionary<string, string> flatNbt, string keyValue)

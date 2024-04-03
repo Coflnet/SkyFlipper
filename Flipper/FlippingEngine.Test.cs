@@ -193,7 +193,7 @@ namespace Coflnet.Sky.Flipper
         [TestCase("PET_ITEM_TIER_BOOST", 300000, true)]
         public void PetItemSelects(string item, long exp, bool target)
         {
-            Assert.AreEqual(target, FlipperEngine.ShouldPetItemMatch(new() { { "heldItem", item }, { "exp", exp.ToString() } }));
+            Assert.AreEqual(target, FlipperEngine.ShouldPetItemMatch(new() { { "heldItem", item }, { "exp", exp.ToString() } }, 10));
         }
 
         [Test]
