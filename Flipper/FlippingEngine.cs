@@ -247,7 +247,7 @@ namespace Coflnet.Sky.Flipper
                 return null;
 
             var price = (auction.HighestBidAmount == 0 ? auction.StartingBid : (auction.HighestBidAmount * 1.1)) / auction.Count;
-            if (price < 10) // only care about auctions worth more than the fee
+            if (price < 3000) // only care about auctions worth more than the fee
                 return null;
 
 
@@ -279,9 +279,9 @@ namespace Coflnet.Sky.Flipper
             }
             medianPrice = await GetWeightedMedian(auction, relevantAuctions);
 
-            var reductionDueToCount = Math.Pow(1.05, referenceElement.HitCount);
+            var hitCountReduction = Math.Pow(1.05, referenceElement.HitCount);
             int additionalWorth = await GetGemstoneWorth(auction);
-            var recomendedBuyUnder = (medianPrice * 0.9 + additionalWorth) / reductionDueToCount;
+            var recomendedBuyUnder = (medianPrice * 0.9 + additionalWorth) / hitCountReduction;
             if (recomendedBuyUnder < 1_000_000)
             {
                 recomendedBuyUnder *= 0.9;
@@ -309,7 +309,12 @@ namespace Coflnet.Sky.Flipper
                 auction.Context["fsend"] = (DateTime.Now - auction.FindTime).ToString();
             additionalProps["refAge"] = ((int)(DateTime.UtcNow - referenceElement.Oldest).TotalDays).ToString();
 
-            var targetPrice = (int)(medianPrice * auction.Count / reductionDueToCount) + additionalWorth;
+            var countMultiplier = 1d;
+            if (auction.Count > 1)
+            {
+                countMultiplier = 0.9; // more than one has to be cheaper
+            }
+            var targetPrice = (int)(medianPrice * auction.Count * countMultiplier / hitCountReduction) + additionalWorth;
             var lowPrices = new LowPricedAuction()
             {
                 Auction = auction,
@@ -597,7 +602,7 @@ namespace Coflnet.Sky.Flipper
 
             select = AddReforgeSelect(auction, reduced, select);
 
-            if (auction.Count > 1 && !reduced) // try to match exact count
+            if ((auction.Count == 64) && !reduced) // try to match stack count as those are usually cheaper
                 select = select.Where(s => s.Count == auction.Count);
 
             if (auction.ItemName != clearedName && clearedName != null)
@@ -794,7 +799,7 @@ namespace Coflnet.Sky.Flipper
             if (shouldMatch)
                 return shouldMatch;
 
-            return (flatNbt.TryGetValue("exp", out string expString) && double.Parse(expString) < 24_000_000 || !(flatNbt["heldItem"].Contains("SKILL") && flatNbt["heldItem"].Contains("BOOST"))) 
+            return (flatNbt.TryGetValue("exp", out string expString) && double.Parse(expString) < 24_000_000 || !(flatNbt["heldItem"].Contains("SKILL") && flatNbt["heldItem"].Contains("BOOST")))
                 && startingBid < 20_000_000; // don't care about low value boosts on expensive items
         }
 
