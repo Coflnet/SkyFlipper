@@ -551,6 +551,23 @@ namespace Coflnet.Sky.Flipper
                     .GroupBy(a => a.FlatenedNBT.TryGetValue("uid", out string uid) ? uid : counter++.ToString())
                     .Select(a => a.First())
                     .ToList();
+            if (counter > 2)
+            {
+                // this is an item with no uid, check that there is no back-forth trading with same users
+                var users = relevantAuctions.Select(a =>
+                {
+                    var buyer = a.Bids.OrderByDescending(b => b.Amount).First().Bidder;
+                    var seller = a.AuctioneerId;
+                    // order them to have a consistent order
+                    return AuctionService.Instance.GetId(buyer) < AuctionService.Instance.GetId(seller) ? (buyer, seller) : (seller, buyer);
+                }).GroupBy(a => a).Where(g => g.Count() > 1).ToList();
+                if (users.Count > 0)
+                {
+                    Console.WriteLine($"found back and forth trading on {relevantAuctions.First().Uuid} {users.Count} users from {users.First().Key}");
+                    // exclude all of them
+                    relevantAuctions = relevantAuctions.Where(a => !users.Any(u => u.Key.Item1 == a.AuctioneerId || u.Key.Item2 == a.AuctioneerId)).ToList();
+                }
+            }
 
             foreach (var item in relevantAuctions)
             {
