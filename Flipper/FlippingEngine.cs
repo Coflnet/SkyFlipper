@@ -11,7 +11,6 @@ using MessagePack;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Coflnet.Sky.PlayerName.Client.Api;
-using OpenTracing.Propagation;
 using Microsoft.Extensions.Configuration;
 using System.Diagnostics;
 using Coflnet.Sky.Core.Services;
@@ -513,6 +512,13 @@ namespace Coflnet.Sky.Flipper
             }
             else if (relevantAuctions.Count >= 30)
                 await AddVeryRecentReferencesForHighVolume(auction, baseSelect, tracking, clearedName, youngest, relevantEnchants, ulti, relevantAuctions);
+            if(relevantAuctions.All(a=>a.End > DateTime.UtcNow- TimeSpan.FromDays(1)))
+            {
+                // Add anti market manipulation data
+                relevantAuctions.AddRange(
+                                await GetSelect(auction, select, clearedName, youngest, ulti, relevantEnchants, DateTime.Now - TimeSpan.FromDays(6), tracking, 40, true)
+                                        .ToListAsync());
+            }
 
             /* got replaced with average overall lookup
             if (relevantAuctions.Count < 3 && PotetialFlipps.Count < 100)

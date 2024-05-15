@@ -6,7 +6,6 @@ using Coflnet.Sky.Core;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using OpenTracing.Util;
 
 namespace Coflnet.Sky.Flipper.Controllers
 {

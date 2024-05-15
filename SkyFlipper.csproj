@@ -16,7 +16,7 @@
     <Compile Remove="**\*.Tests.cs" />
   </ItemGroup>
   <ItemGroup Condition="'$(Configuration)' != 'Release'">
-    <PackageReference Include="NUnit3TestAdapter" Version="4.0.0" />
+    <PackageReference Include="NUnit3TestAdapter" Version="4.5.0" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.11.0" />
     <None Update="Mock/ultireflist.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>

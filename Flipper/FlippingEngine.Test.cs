@@ -6,6 +6,7 @@ using Coflnet.Sky.Core;
 using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
 using NUnit.Framework;
+using NUnit.Framework.Legacy;
 
 namespace Coflnet.Sky.Flipper
 {
@@ -90,7 +91,7 @@ namespace Coflnet.Sky.Flipper
                 Enchantment.EnchantmentType.unknown,
                 tracking);
             // only one of the auctions matches
-            Assert.AreEqual("fc92b460920d486494732beeed57ed77", result.Single().Uuid);
+            Assert.That("fc92b460920d486494732beeed57ed77", Is.EqualTo(result.Single().Uuid));
         }
 
 
@@ -120,7 +121,7 @@ namespace Coflnet.Sky.Flipper
             var result = await new FlipperEngine(null, new Commands.Shared.GemPriceService(null, null, mockConfig), null, null, null, null, null)
                             .GetWeightedMedian(new SaveAuction(), references);
             // chooses the recent median
-            Assert.AreEqual(newest.HighestBidAmount, result);
+            Assert.That(newest.HighestBidAmount, Is.EqualTo(result));
         }
 
         public class NbtMock : INBT
@@ -183,7 +184,7 @@ namespace Coflnet.Sky.Flipper
                 Tag = "MAGMA_ROD",
             }, samples.AsQueryable(), null, DateTime.Now, null, new(), default, null, 0);
             var res = query.ToList();
-            Assert.AreEqual(1, res.Count);
+            Assert.That(res.Count, Is.EqualTo(1));
         }
 
         [Test]
@@ -193,7 +194,7 @@ namespace Coflnet.Sky.Flipper
         [TestCase("PET_ITEM_TIER_BOOST", 300000, true)]
         public void PetItemSelects(string item, long exp, bool target)
         {
-            Assert.AreEqual(target, FlipperEngine.ShouldPetItemMatch(new() { { "heldItem", item }, { "exp", exp.ToString() } }, 10));
+            Assert.That(target == FlipperEngine.ShouldPetItemMatch(new() { { "heldItem", item }, { "exp", exp.ToString() } }, 10));
         }
 
         [Test]
@@ -202,7 +203,7 @@ namespace Coflnet.Sky.Flipper
         [TestCase("[Lvl 1] Test", "[Lvl _] Test")]
         public void TestPetLevelComp(string full, string target)
         {
-            Assert.AreEqual(target, FlipperEngine.GetPetLevelSelectVal(new() { ItemName = full }));
+            Assert.That(target == FlipperEngine.GetPetLevelSelectVal(new() { ItemName = full }));
         }
 
     }
