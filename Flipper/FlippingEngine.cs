@@ -14,6 +14,7 @@ using Coflnet.Sky.PlayerName.Client.Api;
 using Microsoft.Extensions.Configuration;
 using System.Diagnostics;
 using Coflnet.Sky.Core.Services;
+using System.Reflection.Metadata;
 
 namespace Coflnet.Sky.Flipper
 {
@@ -512,7 +513,7 @@ namespace Coflnet.Sky.Flipper
             }
             else if (relevantAuctions.Count >= 30)
                 await AddVeryRecentReferencesForHighVolume(auction, baseSelect, tracking, clearedName, youngest, relevantEnchants, ulti, relevantAuctions);
-            if(relevantAuctions.All(a=>a.End > DateTime.UtcNow- TimeSpan.FromDays(1)))
+            if (relevantAuctions.All(a => a.End > DateTime.UtcNow - TimeSpan.FromDays(1)))
             {
                 // Add anti market manipulation data
                 relevantAuctions.AddRange(
@@ -611,7 +612,8 @@ namespace Coflnet.Sky.Flipper
             int limit = 60,
             bool reduced = false)
         {
-            if (auction.Tag != "ENCHANTED_BOOK") // the rarity is often used from scamming but doesn't change price
+            var recombMatters = Constants.DoesRecombMatter(auction.Category, auction.Tag);
+            if (auction.Tag != "ENCHANTED_BOOK" && (recombMatters || NBT.IsPet(auction.Tag))) // the rarity is often used from scamming but doesn't change price
                 select = select.Where(a => a.Tier == auction.Tier);
 
             byte ultiLevel = 127;
@@ -667,7 +669,7 @@ namespace Coflnet.Sky.Flipper
             if (auction.Tag == "CAKE_SOUL")
                 select = AddNBTSelect(select, flatNbt, "captured_player");
 
-            if (flatNbt.ContainsKey("rarity_upgrades"))
+            if (flatNbt.ContainsKey("rarity_upgrades") && recombMatters)
                 select = AddNBTSelect(select, flatNbt, "rarity_upgrades");
             if (auction.Tag == "ASPECT_OF_THE_VOID" || auction.Tag == "ASPECT_OF_THE_END")
                 select = AddNBTSelect(select, flatNbt, "ethermerge");
