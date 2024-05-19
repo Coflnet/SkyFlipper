@@ -236,8 +236,6 @@ namespace Coflnet.Sky.Flipper
             }
         }
 
-        private uint _auctionCounter = 0;
-
         public ConcurrentDictionary<long, List<long>> relevantAuctionIds = new ConcurrentDictionary<long, List<long>>();
 
         public async System.Threading.Tasks.Task<FlipInstance> NewAuction(SaveAuction auction, IProducer<string, LowPricedAuction> lpp, Activity span)
