@@ -257,16 +257,12 @@ namespace Coflnet.Sky.Flipper
             var relevantAuctions = referenceElement.references;
 
             long medianPrice = 0;
-            if (relevantAuctions.Count <= 6)
+            if (relevantAuctions.Count <= 7)
             {
                 Console.WriteLine($"Not enough relevant auctions for {referenceElement.Key} {auction.Uuid} ({ExtractRelevantEnchants(auction).Count} {relevantAuctions.Count})");
 
                 // the overall median was deemed to inaccurate
                 return null;
-                /* var itemId = ItemDetails.Instance.GetItemIdForName(auction.Tag, false);
-                 var lookupPrices = await ItemPrices.GetLookupForToday(itemId);
-                 if (lookupPrices?.Prices.Count > 0)
-                     medianPrice = (long)(lookupPrices?.Prices?.Average(p => p.Avg * 0.8 + p.Min * 0.2) ?? 0);*/
             }
             var binRefcount = relevantAuctions.Count(a => a.Bin);
             if (relevantAuctions.Count > binRefcount * 2)
