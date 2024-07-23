@@ -54,7 +54,7 @@ namespace Coflnet.Sky.Flipper.Controllers
             if (auction == null)
                 return new List<SaveAuction>();
             var cached = await flipperEngine.GetRelevantAuctionsCache(auction, new FindTracking());
-            var estimate = flipperEngine.GetWeightedMedian(auction, cached.references);
+            var estimate = await flipperEngine.GetWeightedMedian(auction, cached.references);
             return new { cached.HitCount, cached.Key, cached.QueryTime, refCount = cached.references.Count(), estimate };
 
         }

@@ -355,7 +355,7 @@ namespace Coflnet.Sky.Flipper
         private async Task SaveHitOnFlip(RelevantElement referenceElement, SaveAuction auction, double recomendedBuyUnder)
         {
             var storeLength = TimeSpan.FromHours(2);
-            if (referenceElement.HitCount % 3 == 0)
+            if (referenceElement.HitCount % 2 == 0)
                 Console.WriteLine($"hit {referenceElement.Key} {referenceElement.HitCount} times at price {recomendedBuyUnder}");
 
             var storeTime = referenceElement.QueryTime - DateTime.Now + storeLength;
