@@ -643,7 +643,7 @@ namespace Coflnet.Sky.Flipper
                 select = select.Where(a => a.ItemName == clearedName);
             }
 
-            if (auction.Tag == "MIDAS_STAFF" || auction.Tag == "MIDAS_SWORD")
+            if (auction.Tag.EndsWith("MIDAS_STAFF") || auction.Tag.EndsWith("MIDAS_SWORD"))
             {
                 try
                 {
