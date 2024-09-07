@@ -16,14 +16,14 @@
     <Compile Remove="**\*.Tests.cs" />
   </ItemGroup>
   <ItemGroup Condition="'$(Configuration)' != 'Release'">
-    <PackageReference Include="NUnit3TestAdapter" Version="4.5.0" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.11.0" />
+    <PackageReference Include="NUnit3TestAdapter" Version="4.6.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
     <None Update="Mock/ultireflist.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="RateLimiter" Version="2.2.0" />
-    <PackageReference Include="Coflnet.Sky.PlayerName.Client" Version="0.2.0" />
+    <PackageReference Include="Coflnet.Sky.PlayerName.Client" Version="0.2.2" />
   </ItemGroup>
 
 </Project>
