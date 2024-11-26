@@ -649,7 +649,7 @@ namespace Coflnet.Sky.Flipper
                 {
                     var keyValue = "winning_bid";
                     select = AddMidasSelect(select, flatNbt, keyValue);
-                    oldest -= TimeSpan.FromDays(10);
+                    oldest -= TimeSpan.FromDays(5);
                 }
                 catch (Exception e)
                 {
@@ -848,7 +848,7 @@ namespace Coflnet.Sky.Flipper
         private static IQueryable<SaveAuction> AddMidasSelect(IQueryable<SaveAuction> select, Dictionary<string, string> flatNbt, string keyValue)
         {
             var maxDiff = 2_000_000;
-            return AddNbtRangeSelect(select, flatNbt, keyValue, maxDiff);
+            return AddNbtRangeSelect(select, flatNbt, keyValue, maxDiff, 3);
         }
 
         /// <summary>
