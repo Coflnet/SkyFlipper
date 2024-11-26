@@ -848,7 +848,8 @@ namespace Coflnet.Sky.Flipper
         private static IQueryable<SaveAuction> AddMidasSelect(IQueryable<SaveAuction> select, Dictionary<string, string> flatNbt, string keyValue)
         {
             var maxDiff = 2_000_000;
-            return AddNbtRangeSelect(select, flatNbt, keyValue, maxDiff, 3);
+            var additionalCoinsSelect = AddNbtRangeSelect(select, flatNbt, "additional_coins", maxDiff, 3);
+            return AddNbtRangeSelect(additionalCoinsSelect, flatNbt, keyValue, maxDiff, 3);
         }
 
         /// <summary>
