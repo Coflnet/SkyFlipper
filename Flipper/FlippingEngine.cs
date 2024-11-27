@@ -15,6 +15,7 @@ using Microsoft.Extensions.Configuration;
 using System.Diagnostics;
 using Coflnet.Sky.Core.Services;
 using System.Reflection.Metadata;
+using Newtonsoft.Json;
 
 namespace Coflnet.Sky.Flipper
 {
@@ -849,7 +850,9 @@ namespace Coflnet.Sky.Flipper
         {
             var maxDiff = 2_000_000;
             var additionalCoinsSelect = AddNbtRangeSelect(select, flatNbt, "additional_coins", maxDiff, 3);
-            return AddNbtRangeSelect(additionalCoinsSelect, flatNbt, keyValue, maxDiff, 3);
+            var full = AddNbtRangeSelect(additionalCoinsSelect, flatNbt, keyValue, maxDiff, 3);
+            Console.WriteLine($"Select for {JsonConvert.SerializeObject(flatNbt)} is " + full.ToQueryString());
+            return full;
         }
 
         /// <summary>
