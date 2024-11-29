@@ -872,7 +872,7 @@ namespace Coflnet.Sky.Flipper
                 return select.Where(a => !a.NBTLookup.Where(n => n.KeyId == keyId).Any());
             }
             var val = long.Parse(stringValue);
-            maxDiff += val * percentIncrease;
+            maxDiff += val * percentIncrease / 100;
             select = select.Where(a => a.NBTLookup.Where(n => n.KeyId == keyId && n.Value > val - maxDiff && n.Value < val + maxDiff).Any());
             return select;
         }
