@@ -265,14 +265,14 @@ namespace Coflnet.Sky.Flipper
                 // the overall median was deemed to inaccurate
                 return null;
             }
+            medianPrice = await GetWeightedMedian(auction, relevantAuctions);
             var binRefcount = relevantAuctions.Count(a => a.Bin);
             if (relevantAuctions.Count > binRefcount * 2)
             {
-                Console.WriteLine($"Too many auctions that are not BIN {auction.Uuid} bin count {binRefcount} total references {relevantAuctions.Count})");
+                Console.WriteLine($"many auctions that are not BIN {auction.Uuid} bin count {binRefcount} total references {relevantAuctions.Count})");
                 // too many auctions that are not BIN
-                return null;
+                medianPrice /= 2;
             }
-            medianPrice = await GetWeightedMedian(auction, relevantAuctions);
 
             var hitCountReduction = Math.Pow(1.05, referenceElement.HitCount);
             int additionalWorth = await GetGemstoneWorth(auction);
