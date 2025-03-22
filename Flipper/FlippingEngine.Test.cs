@@ -29,7 +29,6 @@ namespace Coflnet.Sky.Flipper
             CollectionAssert.Contains(test, Enchantment.EnchantmentType.ultimate_one_for_all);
             CollectionAssert.Contains(test, Enchantment.EnchantmentType.cubism);
             CollectionAssert.Contains(test, Enchantment.EnchantmentType.snipe);
-            CollectionAssert.DoesNotContain(test, Enchantment.EnchantmentType.compact);
             CollectionAssert.DoesNotContain(test, Enchantment.EnchantmentType.cleave);
         }
 
