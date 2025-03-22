@@ -482,6 +482,7 @@ namespace Coflnet.Sky.Flipper
 
             if (relevantAuctions.Count < 11)
             {
+                youngest = oldest;
                 // to few auctions in last hour, try a whole day
                 oldest = DateTime.Now - TimeSpan.FromDays(1.5);
                 relevantAuctions = relevantAuctions.Concat(await GetSelect(auction, baseSelect, clearedName, youngest, ulti, relevantEnchants, oldest, tracking, 90)
