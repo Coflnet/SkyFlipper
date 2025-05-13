@@ -671,6 +671,8 @@ namespace Coflnet.Sky.Flipper
                 select = AddNBTSelect(select, flatNbt, "ethermerge");
             if (auction.Tag == "NECRONS_LADDER")
                 select = AddNBTSelect(select, flatNbt, "handles_found");
+            if (auction.Tag == "DIANAS_BOOKSHELF")
+                select = AddNBTSelect(select, flatNbt, "chimera_found");
             if (flatNbt.ContainsKey("edition"))
                 select = AddNbtRangeSelect(select, flatNbt, "edition", 100, 10);
 
