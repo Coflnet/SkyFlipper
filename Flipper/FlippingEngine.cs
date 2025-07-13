@@ -61,6 +61,8 @@ namespace Coflnet.Sky.Flipper
 
         public HashSet<long> ValuablePetItemIds = new();
         private HypixelItemService itemService;
+        private INBT nbt;
+        private ItemDetails itemDetails;
 
         private static readonly Dictionary<string, short> ShardAttributes = new(){
             {"mana_pool", 1},
@@ -95,7 +97,7 @@ namespace Coflnet.Sky.Flipper
             }
         }
 
-        public FlipperEngine(IServiceScopeFactory factory, Commands.Shared.GemPriceService gemPriceService, IPlayerNameApi playerNameApi, Kafka.KafkaCreator kafkaCreator, IConfiguration config, ActivitySource activitySource, HypixelItemService itemService)
+        public FlipperEngine(IServiceScopeFactory factory, Commands.Shared.GemPriceService gemPriceService, IPlayerNameApi playerNameApi, Kafka.KafkaCreator kafkaCreator, IConfiguration config, ActivitySource activitySource, HypixelItemService itemService, INBT nbt, ItemDetails itemDetails)
         {
             this.serviceFactory = factory;
             this.gemPriceService = gemPriceService;
@@ -104,6 +106,8 @@ namespace Coflnet.Sky.Flipper
             this.config = config;
             this.activitySource = activitySource;
             this.itemService = itemService;
+            this.nbt = nbt;
+            this.itemDetails = itemDetails;
         }
 
         private RestSharp.RestClient apiClient = new RestSharp.RestClient(SimplerConfig.Config.Instance["api_base_url"]);
@@ -251,7 +255,7 @@ namespace Coflnet.Sky.Flipper
 
 
             if (auction.NBTLookup == null || auction.NBTLookup.Count() == 0)
-                auction.NBTLookup = NBT.CreateLookup(auction);
+                auction.NBTLookup = nbt.CreateLookup(auction);
 
             var trackingContext = new FindTracking() { Span = span };
             var referenceElement = await GetRelevantAuctionsCache(auction, trackingContext);
@@ -463,7 +467,7 @@ namespace Coflnet.Sky.Flipper
         {
             var itemData = auction.NbtData.Data;
             var clearedName = auction.Reforge != ItemReferences.Reforge.None ? ItemReferences.RemoveReforge(auction.ItemName) : auction.ItemName;
-            var itemId = ItemDetails.Instance.GetItemIdForTag(auction.Tag, false);
+            var itemId = itemDetails.GetItemIdForTag(auction.Tag, false);
             var youngest = DateTime.Now;
             List<Enchantment> relevantEnchants = ExtractRelevantEnchants(auction);
             //var matchingCount = relevantEnchants.Count > 3 ? relevantEnchants.Count * 2 / 3 : relevantEnchants.Count;
@@ -716,8 +720,8 @@ namespace Coflnet.Sky.Flipper
 
             if (flatNbt.ContainsKey("skin"))
             {
-                var keyId = NBT.Instance.GetKeyId("skin");
-                var val = NBT.GetItemIdForSkin(flatNbt["skin"]);
+                var keyId = nbt.GetKeyId("skin");
+                var val = nbt.GetItemIdForSkin(flatNbt["skin"]);
                 select = select.Where(a => a.NBTLookup.Where(n => n.KeyId == keyId && n.Value == val).Any());
             }
 
@@ -731,7 +735,7 @@ namespace Coflnet.Sky.Flipper
             {
                 if (item.Key.EndsWith("_kills"))
                 {
-                    var keyId = NBT.Instance.GetKeyId(item.Key);
+                    var keyId = nbt.GetKeyId(item.Key);
                     var val = Int32.Parse(item.Value);
                     var max = val * 1.2;
                     var min = val * 0.8;
@@ -782,8 +786,8 @@ namespace Coflnet.Sky.Flipper
         {
             if (flatNbt.ContainsKey("heldItem"))
             {
-                var keyId = NBT.Instance.GetKeyId("heldItem");
-                var val = ItemDetails.Instance.GetItemIdForTag(flatNbt["heldItem"]);
+                var keyId = nbt.GetKeyId("heldItem");
+                var val = itemDetails.GetItemIdForTag(flatNbt["heldItem"]);
                 // only include boosts if there are still exp to be boosted
                 if (ShouldPetItemMatch(flatNbt, startingBid))
                     select = select.Where(a => a.NBTLookup.Where(n => n.KeyId == keyId && n.Value == val).Any());
@@ -792,7 +796,7 @@ namespace Coflnet.Sky.Flipper
             }
             else if (flatNbt.ContainsKey("candyUsed")) // every pet has candyUsed attribute
             {
-                var keyId = NBT.Instance.GetKeyId("heldItem");
+                var keyId = nbt.GetKeyId("heldItem");
                 select = select.Where(a => !a.NBTLookup.Where(n => n.KeyId == keyId).Any());
             }
 
@@ -826,28 +830,28 @@ namespace Coflnet.Sky.Flipper
                 && startingBid < 20_000_000; // don't care about low value boosts on expensive items
         }
 
-        private static IQueryable<SaveAuction> AddNBTSelect(IQueryable<SaveAuction> select, Dictionary<string, string> flatNbt, string keyValue)
+        private IQueryable<SaveAuction> AddNBTSelect(IQueryable<SaveAuction> select, Dictionary<string, string> flatNbt, string keyValue)
         {
-            var keyId = NBT.Instance.GetKeyId(keyValue);
+            var keyId = nbt.GetKeyId(keyValue);
             if (!flatNbt.ContainsKey(keyValue))
                 return select.Where(a => !a.NBTLookup.Where(n => n.KeyId == keyId).Any());
 
             if (!long.TryParse(flatNbt[keyValue], out long val))
             {
-                val = NBT.Instance.GetValueId(keyId, flatNbt[keyValue]);
+                val = nbt.GetValueId(keyId, flatNbt[keyValue]);
                 return select.Where(a => a.NBTLookup.Where(n => n.KeyId == keyId && n.Value == val).Any());
             }
             var lowerLimit = (long)(val * 0.8);
             return select.Where(a => a.NBTLookup.Where(n => n.KeyId == keyId && n.Value <= val && n.Value > lowerLimit).Any());
         }
 
-        private static IQueryable<SaveAuction> AddCandySelect(IQueryable<SaveAuction> select, Dictionary<string, string> flatNbt, string keyValue)
+        private IQueryable<SaveAuction> AddCandySelect(IQueryable<SaveAuction> select, Dictionary<string, string> flatNbt, string keyValue)
         {
-            var keyId = NBT.Instance.GetKeyId(keyValue);
+            var keyId = nbt.GetKeyId(keyValue);
             long.TryParse(flatNbt[keyValue], out long val);
             if (flatNbt.TryGetValue("exp", out string expString) && double.TryParse(expString, out double exp) && exp > 24_000_000 && !flatNbt.ContainsKey("skin"))
             {
-                var skinid = NBT.GetItemIdForSkin(flatNbt["skin"]);
+                var skinid = nbt.GetItemIdForSkin(flatNbt["skin"]);
                 return select.Where(a => !a.NBTLookup.Where(n => n.KeyId == skinid).Any());
             }
             if (val > 0)
@@ -855,7 +859,7 @@ namespace Coflnet.Sky.Flipper
             return select.Where(a => a.NBTLookup.Where(n => n.KeyId == keyId && n.Value == 0).Any());
         }
 
-        private static IQueryable<SaveAuction> AddMidasSelect(IQueryable<SaveAuction> select, Dictionary<string, string> flatNbt, string keyValue)
+        private IQueryable<SaveAuction> AddMidasSelect(IQueryable<SaveAuction> select, Dictionary<string, string> flatNbt, string keyValue)
         {
             var maxDiff = 2_000_000;
             var additionalCoinsSelect = AddNbtRangeSelect(select, flatNbt, "additional_coins", maxDiff, 3);
@@ -873,9 +877,9 @@ namespace Coflnet.Sky.Flipper
         /// <param name="maxDiff">By how much the range is extended in both directions</param>
         /// <param name="percentIncrease">How many percent difference should be added to maxDiff</param>
         /// <returns></returns>
-        private static IQueryable<SaveAuction> AddNbtRangeSelect(IQueryable<SaveAuction> select, Dictionary<string, string> flatNbt, string keyValue, long maxDiff, int percentIncrease = 0)
+        private IQueryable<SaveAuction> AddNbtRangeSelect(IQueryable<SaveAuction> select, Dictionary<string, string> flatNbt, string keyValue, long maxDiff, int percentIncrease = 0)
         {
-            var keyId = NBT.Instance.GetKeyId(keyValue);
+            var keyId = nbt.GetKeyId(keyValue);
             if (!flatNbt.TryGetValue(keyValue, out var stringValue))
             {
                 return select.Where(a => !a.NBTLookup.Where(n => n.KeyId == keyId).Any());

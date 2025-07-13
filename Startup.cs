@@ -57,12 +57,13 @@ namespace Coflnet.Sky.Flipper
             services.AddHostedService<GemPriceService>(di => di.GetRequiredService<GemPriceService>());
             services.AddSingleton<HypixelItemService>();
             services.AddHttpClient();
+            services.AddSingleton<INBT>(c => new NoWriteNbt());
+            services.AddSingleton<ItemDetails>();
             services.AddSingleton<IPlayerNameApi, PlayerNameApi>(context =>
             {
                 var config = context.GetRequiredService<IConfiguration>();
                 return new PlayerName.Client.Api.PlayerNameApi(config["PLAYERNAME_BASE_URL"]);
             });
-            NBT.Instance = new NoWriteNbt();
         }
 
         public class NoWriteNbt : NBT

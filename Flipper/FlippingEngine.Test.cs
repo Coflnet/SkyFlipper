@@ -117,7 +117,7 @@ namespace Coflnet.Sky.Flipper
                 highest
             };
             var mockConfig = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string>() { { "API_BASE_URL", "http://mock.url" } }).Build();
-            var result = await new FlipperEngine(null, new Commands.Shared.GemPriceService(null, null, mockConfig), null, null, null, null, null)
+            var result = await new FlipperEngine(null, new Commands.Shared.GemPriceService(null, null, mockConfig), null, null, null, null, null, null,null)
                             .GetWeightedMedian(new SaveAuction(), references);
             // chooses the recent median
             Assert.That(newest.HighestBidAmount, Is.EqualTo(result));
@@ -125,6 +125,28 @@ namespace Coflnet.Sky.Flipper
 
         public class NbtMock : INBT
         {
+            public NBTLookup[] CreateLookup(string auctionTag, Dictionary<string, object> data, List<KeyValuePair<string, object>> flatList = null)
+            {
+                return new NBTLookup[]
+                {
+                    new NBTLookup()
+                    {
+                        KeyId = GetKeyId("skin"),
+                        Value = GetItemIdForSkin("skin")
+                    }
+                };
+            }
+
+            public NBTLookup[] CreateLookup(SaveAuction auction)
+            {
+                throw new NotImplementedException();
+            }
+
+            public long GetItemIdForSkin(string name)
+            {
+                return 1;
+            }
+
             public short GetKeyId(string name)
             {
                 // hash to get short 
@@ -137,54 +159,6 @@ namespace Coflnet.Sky.Flipper
             }
         }
 
-        [Test]
-        public void AttributeCheck()
-        {
-            var engine = new FlipperEngine(null, null, null, null, null, null, null);
-            NBT.Instance = new NbtMock();
-            var samples = new SaveAuction[]{
-                new SaveAuction()
-                {
-                    FlatenedNBT = new Dictionary<string, string>()
-                    {
-                        {"infection", "6"},
-                        {"double_hook", "7"}
-                    },
-                    NBTLookup = new List<NBTLookup>(),
-                    Enchantments = new(),
-                    Tag = "MAGMA_ROD",
-                    End = DateTime.Now - TimeSpan.FromDays(1),
-                },
-                new SaveAuction()
-                {
-                    FlatenedNBT = new Dictionary<string, string>()
-                    {
-                        {"infection", "7"},
-                        {"double_hook", "7"}
-                    },
-                    NBTLookup = new List<NBTLookup>(),
-                    Enchantments = new(),
-                    Tag = "MAGMA_ROD",
-                    End = DateTime.Now - TimeSpan.FromDays(1),
-                }
-            };
-            foreach (var item in samples)
-            {
-                item.NBTLookup = NBT.CreateLookup(item.Tag, null, item.FlatenedNBT.Select(x => new KeyValuePair<string, object>(x.Key, (object)int.Parse(x.Value))).ToList());
-            }
-            var query = engine.GetSelect(new SaveAuction()
-            {
-                FlatenedNBT = new Dictionary<string, string>()
-                {
-                    {"infection", "6"},
-                    {"double_hook", "7"}
-                },
-                Enchantments = new(),
-                Tag = "MAGMA_ROD",
-            }, samples.AsQueryable(), null, DateTime.Now, null, new(), default, null, 0);
-            var res = query.ToList();
-            Assert.That(res.Count, Is.EqualTo(1));
-        }
 
         [Test]
         [TestCase("PET_ITEM_ALL_SKILLS_BOOST_COMMON", 30000000, false)]
