@@ -849,7 +849,7 @@ namespace Coflnet.Sky.Flipper
         {
             var keyId = nbt.GetKeyId(keyValue);
             long.TryParse(flatNbt[keyValue], out long val);
-            if (flatNbt.TryGetValue("exp", out string expString) && double.TryParse(expString, out double exp) && exp > 24_000_000 && !flatNbt.ContainsKey("skin"))
+            if (flatNbt.TryGetValue("exp", out string expString) && double.TryParse(expString, out double exp) && exp > 24_000_000 && flatNbt.ContainsKey("skin"))
             {
                 var skinid = nbt.GetItemIdForSkin(flatNbt["skin"]);
                 return select.Where(a => !a.NBTLookup.Where(n => n.KeyId == skinid).Any());
