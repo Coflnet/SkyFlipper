@@ -662,6 +662,8 @@ namespace Coflnet.Sky.Flipper
                     dev.Logger.Instance.Error(e, "trying filter flip midas item");
                 }
             }
+            if(flatNbt.ContainsKey("seconds_held"))
+                select = AddNbtRangeSelect(select, flatNbt, "seconds_held", 20_000, 10);
 
             if (auction.Tag.Contains("HOE") || flatNbt.ContainsKey("farming_for_dummies_count"))
                 select = AddNBTSelect(select, flatNbt, "farming_for_dummies_count");
