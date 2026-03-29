@@ -57,7 +57,7 @@ namespace Coflnet.Sky.Flipper
             services.AddHostedService<GemPriceService>(di => di.GetRequiredService<GemPriceService>());
             services.AddSingleton<HypixelItemService>();
             services.AddHttpClient();
-            services.AddSingleton<INBT>(c => new NoWriteNbt());
+            services.AddSingleton<INBT,NoWriteNbt>();
             services.AddSingleton<ItemDetails>();
             services.AddSingleton<IPlayerNameApi, PlayerNameApi>(context =>
             {
@@ -68,6 +68,9 @@ namespace Coflnet.Sky.Flipper
 
         public class NoWriteNbt : NBT
         {
+            public NoWriteNbt(ItemDetails details) : base(details)
+            {
+            }
             protected override NBTValue AddNewValueToDb((short, string) k, HypixelContext context)
             {
                 return new NBTValue();
