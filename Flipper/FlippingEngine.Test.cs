@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 using Coflnet.Sky.Core;
 using Microsoft.Extensions.Configuration;
@@ -123,6 +124,47 @@ namespace Coflnet.Sky.Flipper
             Assert.That(newest.HighestBidAmount, Is.EqualTo(result));
         }
 
+        [Test]
+        public void DrillPartSelectSupportsLegacyAndPrefixedKeys()
+        {
+            var itemDetails = new ItemDetails(null);
+            itemDetails.TagLookup["COMPONENT"] = 123;
+            var nbt = new NbtMock();
+            var engine = new FlipperEngine(null, null, null, null, null, null, null, nbt, itemDetails);
+            var method = typeof(FlipperEngine).GetMethod("AddDrillPartSelect", BindingFlags.Instance | BindingFlags.NonPublic);
+
+            Assert.That(method, Is.Not.Null);
+
+            var references = new List<SaveAuction>
+            {
+                new()
+                {
+                    Uuid = "legacy",
+                    NBTLookup = new[] { new NBTLookup { KeyId = nbt.GetKeyId("drill_part_engine"), Value = 123 } }
+                },
+                new()
+                {
+                    Uuid = "prefixed",
+                    NBTLookup = new[] { new NBTLookup { KeyId = nbt.GetKeyId("engine.id"), Value = 123 } }
+                },
+                new()
+                {
+                    Uuid = "different",
+                    NBTLookup = new[] { new NBTLookup { KeyId = nbt.GetKeyId("engine.id"), Value = 999 } }
+                }
+            }.AsQueryable();
+
+            var result = (IQueryable<SaveAuction>)method.Invoke(engine, new object[]
+            {
+                references,
+                new Dictionary<string, string> { { "engine.id", "COMPONENT" } },
+                "drill_part_engine",
+                "engine.id"
+            });
+
+            CollectionAssert.AreEquivalent(new[] { "legacy", "prefixed" }, result.Select(a => a.Uuid).ToList());
+        }
+
         public class NbtMock : INBT
         {
             public NBTLookup[] CreateLookup(string auctionTag, Dictionary<string, object> data, List<KeyValuePair<string, object>> flatList = null)
@@ -150,7 +192,7 @@ namespace Coflnet.Sky.Flipper
             public short GetKeyId(string name)
             {
                 // hash to get short 
-                return (short)(name.GetHashCode() % 10000);
+                return (short)Math.Abs(name.GetHashCode() % 10000);
             }
 
             public int GetValueId(short key, string value)

@@ -713,9 +713,9 @@ namespace Coflnet.Sky.Flipper
 
             if (auction.Tag.Contains("_DRILL"))
             {
-                select = AddNBTSelect(select, flatNbt, "drill_part_engine");
-                select = AddNBTSelect(select, flatNbt, "drill_part_fuel_tank");
-                select = AddNBTSelect(select, flatNbt, "drill_part_upgrade_module");
+                select = AddDrillPartSelect(select, flatNbt, "drill_part_engine", "engine.id");
+                select = AddDrillPartSelect(select, flatNbt, "drill_part_fuel_tank", "fuel_tank.id");
+                select = AddDrillPartSelect(select, flatNbt, "drill_part_upgrade_module", "upgrade_module.id");
             }
 
             select = AddPetItemSelect(select, flatNbt, auction.StartingBid);
@@ -830,6 +830,40 @@ namespace Coflnet.Sky.Flipper
 
             return (flatNbt.TryGetValue("exp", out string expString) && double.Parse(expString) < 24_000_000 || !(flatNbt["heldItem"].Contains("SKILL") && flatNbt["heldItem"].Contains("BOOST")))
                 && startingBid < 20_000_000; // don't care about low value boosts on expensive items
+        }
+
+        private IQueryable<SaveAuction> AddDrillPartSelect(IQueryable<SaveAuction> select, Dictionary<string, string> flatNbt, string legacyKey, string prefixedKey)
+        {
+            var keyIds = new[] { nbt.GetKeyId(legacyKey), nbt.GetKeyId(prefixedKey) }
+                .Where(id => id > 0)
+                .Distinct()
+                .ToArray();
+
+            if (!TryGetFlatNbtValue(flatNbt, out var value, legacyKey, prefixedKey))
+            {
+                if (keyIds.Length == 0)
+                    return select;
+
+                return select.Where(a => !a.NBTLookup.Where(n => keyIds.Contains(n.KeyId)).Any());
+            }
+
+            var itemId = itemDetails.GetItemIdForTag(value.ToUpperInvariant(), false);
+            if (itemId == 0)
+                return select.Where(a => false);
+
+            return select.Where(a => a.NBTLookup.Where(n => keyIds.Contains(n.KeyId) && n.Value == itemId).Any());
+        }
+
+        private static bool TryGetFlatNbtValue(Dictionary<string, string> flatNbt, out string value, params string[] keys)
+        {
+            value = null;
+            foreach (var key in keys)
+            {
+                if (flatNbt.TryGetValue(key, out value))
+                    return true;
+            }
+
+            return false;
         }
 
         private IQueryable<SaveAuction> AddNBTSelect(IQueryable<SaveAuction> select, Dictionary<string, string> flatNbt, string keyValue)
