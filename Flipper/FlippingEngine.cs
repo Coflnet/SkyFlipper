@@ -314,6 +314,22 @@ namespace Coflnet.Sky.Flipper
                 countMultiplier = 0.9; // more than one has to be cheaper
             }
             var targetPrice = (int)(medianPrice * auction.Count * countMultiplier / hitCountReduction) + additionalWorth;
+
+            // For high value flips make sure the sell estimate isn't above what the item is currently listed for.
+            // The historical median can lag when the price just dropped and cheaper copies are already on the market.
+            if (targetPrice - price * auction.Count > 5_000_000)
+            {
+                var fifthLowestActive = await GetFifthLowestActiveListing(auction);
+                if (fifthLowestActive.HasValue)
+                {
+                    var activeEstimate = fifthLowestActive.Value * auction.Count;
+                    if (activeEstimate < targetPrice)
+                    {
+                        additionalProps["activeListingCap"] = fifthLowestActive.Value.ToString();
+                        targetPrice = (int)activeEstimate;
+                    }
+                }
+            }
             var lowPrices = new LowPricedAuction()
             {
                 Auction = auction,
@@ -355,6 +371,38 @@ namespace Coflnet.Sky.Flipper
             }
 
             return Math.Min(fullTime, shortTerm);
+        }
+
+        /// <summary>
+        /// Returns the per item price of the 5th cheapest currently active BIN listing comparable to <paramref name="auction"/>,
+        /// or null if there are fewer than 5. Used to cap the sell estimate of high value flips at what the item can
+        /// realistically be listed for right now (the reference median only looks at auctions that already ended).
+        /// </summary>
+        private async Task<long?> GetFifthLowestActiveListing(SaveAuction auction)
+        {
+            using var scope = serviceFactory.CreateScope();
+            using var context = scope.ServiceProvider.GetRequiredService<HypixelContext>();
+            var clearedName = auction.Reforge != ItemReferences.Reforge.None ? ItemReferences.RemoveReforge(auction.ItemName) : auction.ItemName;
+            var itemId = itemDetails.GetItemIdForTag(auction.Tag, false);
+            var relevantEnchants = ExtractRelevantEnchants(auction);
+            var ulti = relevantEnchants.Where(e => UltimateEnchants.ContainsKey(e.Type)).FirstOrDefault();
+            var now = DateTime.UtcNow;
+            // active, not yet sold BIN listings of the same item (excluding the candidate itself)
+            var activeSelect = context.Auctions
+                .Where(a => a.ItemId == itemId && a.Bin && a.End > now && a.HighestBidAmount == 0 && a.Uuid != auction.Uuid);
+            // reuse the full item matching; limit 0 skips the ended-auction time window and the take/include
+            var matched = GetSelect(auction, activeSelect, clearedName, DateTime.Now, ulti, relevantEnchants, DateTime.Now, new FindTracking(), 0);
+            if (matched == null)
+                return null;
+            var cheapest = await matched
+                .Select(a => new { a.StartingBid, a.Count })
+                .OrderBy(a => a.StartingBid / (a.Count == 0 ? 1 : a.Count))
+                .Take(5)
+                .ToListAsync();
+            if (cheapest.Count < 5)
+                return null;
+            var fifth = cheapest[4];
+            return fifth.StartingBid / (fifth.Count == 0 ? 1 : fifth.Count);
         }
 
         private async Task SaveHitOnFlip(RelevantElement referenceElement, SaveAuction auction, double recomendedBuyUnder)
