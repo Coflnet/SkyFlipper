@@ -52,6 +52,8 @@ namespace Coflnet.Sky.Flipper
                 properties.Add(new Property($"Holds {ItemDetails.TagToName(data["heldItem"])}", 12));
             if (data.ContainsKey("candyUsed"))
                 properties.Add(new Property($"Candy Used {data["candyUsed"]}", 11));
+            if (data.ContainsKey("honey_pot_uses"))
+                properties.Add(new Property($"Honey Pot Uses {data["honey_pot_uses"]}", 11));
             if (data.ContainsKey("farming_for_dummies_count"))
                 properties.Add(new Property($"Farming for dummies {data["farming_for_dummies_count"]}", 11));
             if (data.ContainsKey("skin"))

@@ -165,6 +165,50 @@ namespace Coflnet.Sky.Flipper
             CollectionAssert.AreEquivalent(new[] { "legacy", "prefixed" }, result.Select(a => a.Uuid).ToList());
         }
 
+        [Test]
+        public void HoneyPotUsesSelectsExactReferenceBucket()
+        {
+            var nbt = new NbtMock();
+            var engine = new FlipperEngine(null, null, null, null, null, null, null, nbt, new ItemDetails(null));
+            var keyId = nbt.GetKeyId("honey_pot_uses");
+            var target = new SaveAuction
+            {
+                Tag = "BEHEMOTH_POT_OF_HONEYCOMB",
+                ItemName = "Behemoth Pot of Honeycomb",
+                Tier = Tier.LEGENDARY,
+                Count = 1,
+                Enchantments = new(),
+                FlatenedNBT = new() { { "honey_pot_uses", "9" } }
+            };
+            var references = new[] { 1L, 8L, 9L, 10L }
+                .Select(uses => new SaveAuction
+                {
+                    Uuid = uses.ToString(),
+                    ItemName = target.ItemName,
+                    Tier = target.Tier,
+                    Count = 1,
+                    Enchantments = new(),
+                    NBTLookup = new[] { new NBTLookup { KeyId = keyId, Value = uses } }
+                })
+                .AsQueryable();
+
+            var result = engine.GetSelect(
+                target,
+                references,
+                target.ItemName,
+                DateTime.UtcNow,
+                null,
+                new(),
+                DateTime.UtcNow.AddDays(-1),
+                new FindTracking(),
+                0);
+
+            Assert.That(result.Single().Uuid, Is.EqualTo("9"));
+            Assert.That(
+                PropertiesSelector.GetProperties(target).Any(p => p.Value == "Honey Pot Uses 9"),
+                Is.True);
+        }
+
         public class NbtMock : INBT
         {
             public NBTLookup[] CreateLookup(string auctionTag, Dictionary<string, object> data, List<KeyValuePair<string, object>> flatList = null)

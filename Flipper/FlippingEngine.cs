@@ -736,6 +736,8 @@ namespace Coflnet.Sky.Flipper
                 select = AddNBTSelect(select, flatNbt, "dungeon_item_level");
             if (flatNbt.ContainsKey("candyUsed"))
                 select = AddCandySelect(select, flatNbt, "candyUsed");
+            if (flatNbt.ContainsKey("honey_pot_uses"))
+                select = AddExactNbtSelect(select, flatNbt, "honey_pot_uses");
             if (flatNbt.ContainsKey("art_of_war_count"))
                 select = AddNBTSelect(select, flatNbt, "art_of_war_count");
             if (flatNbt.ContainsKey("MUSIC"))
@@ -941,6 +943,13 @@ namespace Coflnet.Sky.Flipper
             if (val > 0)
                 return select.Where(a => a.NBTLookup.Where(n => n.KeyId == keyId && n.Value > 0).Any());
             return select.Where(a => a.NBTLookup.Where(n => n.KeyId == keyId && n.Value == 0).Any());
+        }
+
+        private IQueryable<SaveAuction> AddExactNbtSelect(IQueryable<SaveAuction> select, Dictionary<string, string> flatNbt, string keyValue)
+        {
+            var keyId = nbt.GetKeyId(keyValue);
+            var value = long.Parse(flatNbt[keyValue]);
+            return select.Where(a => a.NBTLookup.Any(n => n.KeyId == keyId && n.Value == value));
         }
 
         private IQueryable<SaveAuction> AddMidasSelect(IQueryable<SaveAuction> select, Dictionary<string, string> flatNbt, string keyValue)
