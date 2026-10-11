@@ -1,3 +1,4 @@
+using Coflnet.Core;
 using Coflnet.Sky.Core;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -18,6 +19,15 @@ namespace Coflnet.Sky.Flipper
 
         public static IHostBuilder CreateHostBuilder(string[] args) =>
             Host.CreateDefaultBuilder(args)
+                .ConfigureLogging((context, logging) =>
+                {
+                    // Shared OTel logging configuration from Coflnet.Core.
+                    // Bridges ILogger -> OTLP (Loki) when a logs endpoint is configured and
+                    // falls back to the console otherwise.
+                    logging.AddOpenTelemetryLogging(
+                        context.Configuration,
+                        context.Configuration["JAEGER_SERVICE_NAME"] ?? "sky-flipper");
+                })
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
                     webBuilder.UseStartup<Startup>();
