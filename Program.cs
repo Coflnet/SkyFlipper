@@ -14,6 +14,7 @@ namespace Coflnet.Sky.Flipper
         {
             var host = CreateHostBuilder(args).Build();
             HypixelContext.SetConfiguration(host.Services.GetRequiredService<IConfiguration>());
+            new DatabaseTls(host.Services.GetRequiredService<IConfiguration>()).Install();
             host.Run();
         }
 
